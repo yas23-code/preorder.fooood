@@ -1,0 +1,34 @@
+project_id = "knhnzzkyctskkgqfprsz"
+
+[functions.create-cashfree-order]
+verify_jwt = false
+
+[functions.verify-cashfree-payment]
+verify_jwt = false
+
+[functions.process-notification-queue]
+verify_jwt = false
+
+[functions.send-brevo-email]
+verify_jwt = false
+
+[functions.send-vendor-order-email]
+verify_jwt = false
+
+[functions.create-shop-cashfree-order]
+verify_jwt = false
+
+[functions.verify-shop-cashfree-payment]
+verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
+
+[functions.send-shop-brevo-email]
+verify_jwt = false
+
+[functions.send-shop-vendor-order-email]
+verify_jwt = false
+
+[functions.demand-prediction]
+verify_jwt = false

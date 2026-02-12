@@ -1,0 +1,214 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* McDonald's Inspired Theme */
+    --background: 47 100% 94%;        /* #FFF8E1 - Light Cream */
+    --foreground: 0 0% 10%;           /* #1A1A1A - Text Color */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    
+    /* Primary Yellow - McDonald's Gold */
+    --primary: 45 100% 50%;           /* #FFC300 */
+    --primary-foreground: 0 0% 10%;   /* Black text on yellow */
+    
+    /* Secondary - Light Yellow */
+    --secondary: 45 100% 85%;         /* #FFECB3 - Selected category */
+    --secondary-foreground: 0 0% 10%;
+    
+    /* Muted */
+    --muted: 47 100% 94%;
+    --muted-foreground: 0 0% 40%;
+    
+    /* Accent Red - McDonald's Red */
+    --accent: 4 79% 49%;              /* #DA291C */
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 4 79% 49%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 47 100% 75%;            /* #FFE680 - Light Yellow Border */
+    --input: 47 100% 75%;
+    --ring: 45 100% 50%;
+    --radius: 0.75rem;
+
+    /* Custom Tokens */
+    --cream: 47 100% 94%;
+    --mcd-red: 4 79% 49%;
+    --mcd-yellow: 45 100% 50%;
+    --warm-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --gradient-hero: linear-gradient(135deg, hsl(45 100% 50% / 0.2), hsl(4 79% 49% / 0.1));
+    --gradient-warm: linear-gradient(135deg, hsl(45 100% 50%), hsl(45 100% 60%));
+
+    --sidebar-background: 47 100% 94%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 4 79% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 45 100% 85%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 47 100% 75%;
+    --sidebar-ring: 45 100% 50%;
+  }
+
+  .dark {
+    --background: 0 0% 8%;
+    --foreground: 47 100% 94%;
+    --card: 0 0% 12%;
+    --card-foreground: 47 100% 94%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 47 100% 94%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 45 50% 20%;
+    --secondary-foreground: 47 100% 94%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 4 79% 49%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 4 79% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 45 100% 50%;
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 47 100% 94%;
+    --sidebar-primary: 4 79% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 47 100% 94%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 45 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .card-warm {
+    @apply bg-card rounded-xl border border-border/50;
+    box-shadow: var(--warm-shadow);
+  }
+  
+  .btn-gradient {
+    background: var(--gradient-warm);
+    @apply text-accent-foreground font-semibold;
+  }
+  
+  .page-container {
+    @apply container mx-auto px-4 py-6 max-w-6xl;
+  }
+
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm rounded-xl border border-border/30;
+    box-shadow: var(--warm-shadow);
+  }
+}
+
+@layer utilities {
+  .shadow-warm {
+    box-shadow: var(--warm-shadow);
+  }
+  
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .bg-gradient-warm {
+    background: var(--gradient-warm);
+  }
+  
+  .text-gradient {
+    background: var(--gradient-warm);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-warm {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translateY(-10px) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(720deg);
+  }
+}
+
+.animate-confetti {
+  animation: confetti 3s ease-out forwards;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

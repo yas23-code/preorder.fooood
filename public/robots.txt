@@ -1,0 +1,26 @@
+# Robots.txt for preorder.food
+# Allow crawling of public pages only
+
+User-agent: *
+Allow: /
+Allow: /shops
+Allow: /shop/
+Allow: /privacy-policy
+Allow: /terms-conditions
+Allow: /refund-policy
+Allow: /contact-support
+
+# Disallow all authentication and private pages
+Disallow: /auth
+Disallow: /login
+Disallow: /signup
+Disallow: /student/
+Disallow: /vendor/
+Disallow: /admin/
+Disallow: /shops/register
+Disallow: /shops/manage
+Disallow: /shops/orders
+Disallow: /shops/payment-result
+
+# Sitemap location
+Sitemap: https://preorder.food/sitemap.xml
