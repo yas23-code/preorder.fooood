@@ -27,19 +27,25 @@ export function PWAInstallPrompt() {
     useEffect(() => {
         // Don't show if already installed or previously dismissed
         const wasDismissed = localStorage.getItem("pwa-prompt-dismissed");
-        if (wasDismissed) return;
+        console.log("PWA: wasDismissed?", wasDismissed);
+        // if (wasDismissed) return;
+
+        console.log("PWA: isInStandaloneMode?", isInStandaloneMode());
         if (isInStandaloneMode()) return;
 
         // iOS doesn't fire beforeinstallprompt
         if (isIOS()) {
-            setTimeout(() => setShowIOSPrompt(true), 3000);
+            console.log("PWA: detected iOS");
+            setTimeout(() => setShowIOSPrompt(true), 1000);
             return;
         }
 
         const handler = (e: Event) => {
+            console.log("PWA: beforeinstallprompt fired!");
             e.preventDefault();
             setDeferredPrompt(e as BeforeInstallPromptEvent);
-            setTimeout(() => setShowPrompt(true), 3000);
+            // Faster delay for better UX
+            setTimeout(() => setShowPrompt(true), 500);
         };
 
         window.addEventListener("beforeinstallprompt", handler);
