@@ -24,6 +24,7 @@ import Cart from "./pages/student/Cart";
 import Carts from "./pages/student/Carts";
 import StudentOrders from "./pages/student/StudentOrders";
 import PaymentResult from "./pages/student/PaymentResult";
+import CampusMembership from "./pages/student/CampusMembership";
 
 // Vendor Pages
 import VendorDashboard from "./pages/vendor/VendorDashboard";
@@ -145,6 +146,14 @@ const App = () => (
                     element={
                       <ProtectedRoute allowedRole="student">
                         <Cart />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/student/membership"
+                    element={
+                      <ProtectedRoute allowedRole="student">
+                        <CampusMembership />
                       </ProtectedRoute>
                     }
                   />
