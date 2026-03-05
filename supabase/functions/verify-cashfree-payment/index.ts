@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
   try {
     const CASHFREE_APP_ID = Deno.env.get('CASHFREE_APP_ID');
     const CASHFREE_SECRET_KEY = Deno.env.get('CASHFREE_SECRET_KEY');
-    
+
     if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
       console.error('Missing Cashfree credentials');
       return new Response(
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
     }
 
     const { orderId }: VerifyPaymentRequest = await req.json();
-    
+
     console.log('Verifying payment for order:', orderId);
 
     if (!orderId) {
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
 
     // Verify payment with Cashfree API - PRODUCTION MODE
     const cashfreeUrl = `https://api.cashfree.com/pg/orders/${orderId}`;
-    
+
     const cashfreeResponse = await fetch(cashfreeUrl, {
       method: 'GET',
       headers: {
@@ -67,14 +67,39 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const isPaid = cashfreeData.order_status === 'PAID';
-    
+
+    // Check if this is a membership payment
+    if (orderId.includes('_mem_')) {
+      if (isPaid) {
+        // Extract userId from orderId (format: {userId}_mem_{timestamp})
+        const userId = orderId.split('_mem_')[0];
+        console.log(`Activating membership for user: ${userId}`);
+
+        const { error: activationError } = await supabase
+          .rpc('activate_membership', { p_user_id: userId });
+
+        if (activationError) {
+          console.error('Error activating membership:', activationError);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: isPaid,
+          orderStatus: cashfreeData.order_status,
+          paymentStatus: isPaid ? 'paid' : cashfreeData.order_status.toLowerCase(),
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Extract customer phone from Cashfree response
     const customerPhone = cashfreeData.customer_details?.customer_phone || null;
     console.log('Customer phone from Cashfree:', customerPhone);
-    
+
     const { data: orderData, error: updateError } = await supabase
       .from('orders')
-      .update({ 
+      .update({
         payment_status: isPaid ? 'paid' : cashfreeData.order_status.toLowerCase(),
         customer_phone: customerPhone,
       })
@@ -101,7 +126,7 @@ Deno.serve(async (req) => {
             canteen_id: orderData.canteen_id,
           }),
         });
-        
+
         const vendorEmailResult = await vendorEmailResponse.json();
         console.log('Vendor email notification result:', vendorEmailResult);
       } catch (emailError) {

@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   try {
     const CASHFREE_APP_ID = Deno.env.get('CASHFREE_APP_ID');
     const CASHFREE_SECRET_KEY = Deno.env.get('CASHFREE_SECRET_KEY');
-    
+
     if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
       console.error('Missing Cashfree credentials');
       return new Response(
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     }
 
     const { orderId, amount, customerName, customerEmail, customerPhone, returnUrl }: CreateOrderRequest = await req.json();
-    
+
     console.log('Creating Cashfree order:', { orderId, amount, customerName, customerEmail });
 
     // Validate required fields
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
     // Create order with Cashfree API - PRODUCTION MODE
     const cashfreeUrl = 'https://api.cashfree.com/pg/orders';
-    
+
     const orderPayload = {
       order_id: orderId,
       order_amount: amount,
@@ -91,16 +91,18 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ 
-        payment_id: cashfreeData.cf_order_id,
-        payment_session_id: cashfreeData.payment_session_id,
-      })
-      .eq('id', orderId);
+    if (!orderId.includes('_mem_')) {
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          payment_id: cashfreeData.cf_order_id,
+          payment_session_id: cashfreeData.payment_session_id,
+        })
+        .eq('id', orderId);
 
-    if (updateError) {
-      console.error('Error updating order with payment info:', updateError);
+      if (updateError) {
+        console.error('Error updating order with payment info:', updateError);
+      }
     }
 
     return new Response(

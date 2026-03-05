@@ -89,18 +89,46 @@ export function useMembership(): MembershipState {
         if (!user) return false;
 
         try {
-            // Activate membership (upsert)
-            const { error } = await supabase
-                .rpc('activate_membership', { p_user_id: user.id });
+            // Redirect to Cashfree payment
+            const orderId = `${user.id}_mem_${Date.now()}`;
+            const returnUrl = `${window.location.origin}/student/payment-result?order_id=${orderId}`;
 
-            if (error) {
-                console.error('Error activating membership:', error);
+            // Create Cashfree payment order using edge function
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('name, email')
+                .eq('id', user.id)
+                .single();
+
+            const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-cashfree-order', {
+                body: {
+                    orderId,
+                    amount: 29, // Membership price
+                    customerName: profileData?.name || 'Customer',
+                    customerEmail: profileData?.email || 'customer@example.com',
+                    customerPhone: '9999999999', // Placeholder as it's required by PG
+                    returnUrl,
+                },
+            });
+
+            if (paymentError || !paymentData.paymentSessionId) {
+                console.error('Payment order creation failed:', paymentError || paymentData);
                 return false;
             }
 
-            // Refresh data
-            await fetchMembership();
-            return true;
+            // Require Cashfree SDK on frontend
+            if ((window as any).Cashfree) {
+                const cashfree = (window as any).Cashfree({ mode: 'production' }); // Or 'sandbox'
+                await cashfree.checkout({
+                    paymentSessionId: paymentData.paymentSessionId,
+                    redirectTarget: '_self',
+                });
+                // This redirect resolves the checkout visually
+                return false;
+            } else {
+                console.error('Cashfree SDK not loaded');
+                return false;
+            }
         } catch (err) {
             console.error('Failed to purchase membership:', err);
             return false;

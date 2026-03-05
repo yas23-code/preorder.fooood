@@ -41,7 +41,17 @@ export default function PaymentResult() {
         }
 
         if (data.success) {
-          // Get the order details including QR token and status
+          if (orderId.includes('_mem_')) {
+            setStatus('success');
+            toast.success('Membership activated successfully!');
+            setTimeout(() => {
+              navigate('/student/dashboard'); // Or direct them back to membership page 
+            }, 3000);
+            return;
+          }
+
+          // Get the order details including QR token and status 
+          // (Only for food orders)
           const { data: orderData, error: orderError } = await supabase
             .from('orders')
             .select('qr_token, canteen_id, estimated_ready_time, status, order_no')
@@ -60,12 +70,12 @@ export default function PaymentResult() {
           setOrderStatus(orderData.status);
           setOrderNo(orderData.order_no);
           setStatus('success');
-          
+
           // Clear the cart for this canteen
           if (orderData.canteen_id) {
             clearCart(orderData.canteen_id);
           }
-          
+
           toast.success('Payment successful!');
         } else {
           setStatus('failed');
@@ -79,7 +89,7 @@ export default function PaymentResult() {
     };
 
     verifyPayment();
-  }, [orderId, clearCart]);
+  }, [orderId, clearCart, navigate]);
 
   const handleViewOrders = () => {
     navigate('/student/orders');
@@ -138,7 +148,7 @@ export default function PaymentResult() {
             <span className="text-2xl font-bold">#{orderNo}</span>
           </div>
         )}
-        
+
         {/* QR Code Display */}
         {qrToken && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
