@@ -11,6 +11,7 @@ import { CanteenCardWithCapacity } from '@/components/CanteenCardWithCapacity';
 import { ActiveOrderBottomBar } from '@/components/ActiveOrderBottomBar';
 import { ActiveShopOrderBottomBar } from '@/components/ActiveShopOrderBottomBar';
 import { NearbyShopsSection } from '@/components/student/NearbyShopsSection';
+import { MembershipCard } from '@/components/MembershipCard';
 
 import { OrderRejectionBanner } from '@/components/OrderRejectionBanner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -52,12 +53,12 @@ export default function StudentDashboard() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // College location check for canteen visibility
   const { isInsideCampus, isLoading: isLocationLoading, collegeConfig, locationError } = useCollegeLocation();
-  
+
   const searchPlaceholder = useRandomPlaceholder();
-  
+
   // Location-aware notifications: only fetch relevant notification type
   const shouldShowCanteenNotifications = isInsideCampus === true || isInsideCampus === null;
   const shouldShowShopNotifications = isInsideCampus === false;
@@ -148,7 +149,7 @@ export default function StudentDashboard() {
         .select('*')
         .eq('approval_status', 'approved')
         .order('name');
-      
+
       if (error) {
         console.error('Error fetching canteens:', error);
       } else {
@@ -166,7 +167,7 @@ export default function StudentDashboard() {
     if (isInsideCampus === false && collegeConfig?.is_active) {
       return [];
     }
-    
+
     if (!searchQuery) return canteens;
     const query = searchQuery.toLowerCase();
     return canteens.filter(
@@ -247,13 +248,13 @@ export default function StudentDashboard() {
                   >
                     <Bell className="h-6 w-6 md:h-5 md:w-5" strokeWidth={2.25} />
                     {/* Location-aware notification count */}
-                    {((shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) + 
+                    {((shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) +
                       (shouldShowShopNotifications ? dismissedReadyShopOrders.length : 0)) > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-mcd-red text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {(shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) + 
-                         (shouldShowShopNotifications ? dismissedReadyShopOrders.length : 0)}
-                      </span>
-                    )}
+                        <span className="absolute -top-1 -right-1 bg-mcd-red text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {(shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) +
+                            (shouldShowShopNotifications ? dismissedReadyShopOrders.length : 0)}
+                        </span>
+                      )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
@@ -312,12 +313,12 @@ export default function StudentDashboard() {
                       </div>
                     ))}
                     {/* Empty state - location-aware */}
-                    {((shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) + 
+                    {((shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) +
                       (shouldShowShopNotifications ? dismissedReadyShopOrders.length : 0)) === 0 && (
-                      <div className="p-6 text-center text-muted-foreground text-sm">
-                        No dismissed notifications
-                      </div>
-                    )}
+                        <div className="p-6 text-center text-muted-foreground text-sm">
+                          No dismissed notifications
+                        </div>
+                      )}
                   </div>
                 </PopoverContent>
               </Popover>
@@ -343,7 +344,7 @@ export default function StudentDashboard() {
           </div>
         </div>
       </header>
-      
+
       {/* Main Content with Video Background */}
       <div className="relative min-h-[calc(100vh-72px)] md:min-h-[calc(100vh-96px)]">
         {/* Background Video */}
@@ -356,8 +357,8 @@ export default function StudentDashboard() {
         >
           <source src="/videos/canteen-background.mp4" type="video/mp4" />
         </video>
-        
-        
+
+
         {/* Content */}
         <main className="relative z-10 max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-6">
           {/* Search Bar */}
@@ -370,7 +371,7 @@ export default function StudentDashboard() {
                 className="w-full bg-white border-mcd-border rounded-full pl-4 pr-4 py-5 md:py-6 text-sm md:text-base"
               />
             </div>
-            <Button 
+            <Button
               onClick={handleSearch}
               className="bg-mcd-yellow hover:bg-yellow-400 text-foreground font-semibold px-4 md:px-6 rounded-full text-sm md:text-base"
             >
@@ -386,12 +387,15 @@ export default function StudentDashboard() {
           ) : isInsideCampus === true || isInsideCampus === null ? (
             /* Inside Campus - Show ONLY Canteens */
             <div className="space-y-4">
+              {/* Membership Card */}
+              <MembershipCard />
+
               {/* Section Header */}
               <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
                 <Building2 className="w-5 h-5 text-mcd-red" />
                 <h2 className="font-bold text-lg text-foreground">College Canteens</h2>
               </div>
-              
+
               {isLoading ? (
                 <div className="flex justify-center py-12">
                   <LoadingSpinner text="Loading canteens..." />
@@ -399,10 +403,10 @@ export default function StudentDashboard() {
               ) : filteredCanteens.length > 0 ? (
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   {filteredCanteens.map((canteen, index) => (
-                    <CanteenCardWithCapacity 
-                      key={canteen.id} 
-                      canteen={canteen} 
-                      index={index} 
+                    <CanteenCardWithCapacity
+                      key={canteen.id}
+                      canteen={canteen}
+                      index={index}
                     />
                   ))}
                 </div>
@@ -424,7 +428,7 @@ export default function StudentDashboard() {
                 <MapPin className="w-5 h-5 text-mcd-red" />
                 <h2 className="font-bold text-lg text-foreground">Nearby Shops</h2>
               </div>
-              
+
               <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm">
                 <NearbyShopsSection />
               </div>
@@ -444,7 +448,7 @@ export default function StudentDashboard() {
           onOrderCompleted={clearActiveOrder}
         />
       )}
-      
+
       {/* Shop order timer - ONLY when outside campus */}
       {shouldShowShopNotifications && activeShopOrder && (
         <ActiveShopOrderBottomBar

@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { OrderLimitSettings } from '@/components/OrderLimitSettings';
 import { DailyStockManager } from '@/components/vendor/DailyStockManager';
 import { DemandPrediction } from '@/components/vendor/DemandPrediction';
+import { MembershipDiscountSettings } from '@/components/vendor/MembershipDiscountSettings';
 import { Logo } from '@/components/Logo';
 import { QRCodeScanner } from '@/components/QRCodeScanner';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ interface Canteen {
   is_accepting_orders: boolean;
   approval_status: 'pending' | 'approved' | 'rejected';
   stock_mode: 'simple' | 'daily';
+  membership_discount?: number;
 }
 
 interface CustomerProfile {
@@ -95,10 +97,10 @@ export default function VendorDashboard() {
   // Calculate today's income from completed orders (actual food amount, excluding platform fee)
   const calculateTodayIncome = (ordersList: Order[]) => {
     const { startOfDay, endOfDay } = getTodayBoundaries();
-    const todayCompleted = ordersList.filter(order => 
-      order.status === 'completed' && 
+    const todayCompleted = ordersList.filter(order =>
+      order.status === 'completed' &&
       order.payment_status === 'paid' &&
-      order.created_at >= startOfDay && 
+      order.created_at >= startOfDay &&
       order.created_at <= endOfDay
     );
     return todayCompleted.reduce((sum, order) => sum + Number(order.total) - Number((order as any).platform_fee || 0), 0);
@@ -107,10 +109,10 @@ export default function VendorDashboard() {
   // Calculate monthly income from completed orders (actual food amount, excluding platform fee)
   const calculateMonthlyIncome = (ordersList: Order[]) => {
     const { startOfMonth, endOfMonth } = getMonthBoundaries();
-    const monthlyCompleted = ordersList.filter(order => 
-      order.status === 'completed' && 
+    const monthlyCompleted = ordersList.filter(order =>
+      order.status === 'completed' &&
       order.payment_status === 'paid' &&
-      order.created_at >= startOfMonth && 
+      order.created_at >= startOfMonth &&
       order.created_at <= endOfMonth
     );
     return monthlyCompleted.reduce((sum, order) => sum + Number(order.total) - Number((order as any).platform_fee || 0), 0);
@@ -121,12 +123,16 @@ export default function VendorDashboard() {
 
     const fetchData = async () => {
       // First get the vendor's canteen
-      const { data: canteenData } = await supabase
+      const { data: canteenData, error: canteenError } = await supabase
         .from('canteens')
-        .select('id, name, location, is_open, order_limit, is_accepting_orders, approval_status, stock_mode')
+        .select('id, name, location, is_open, order_limit, is_accepting_orders, approval_status, stock_mode, membership_discount')
         .eq('vendor_id', user.id)
         .maybeSingle();
-      
+
+      if (canteenError) {
+        console.error('Error fetching canteen:', canteenError);
+      }
+
       if (!canteenData) {
         setIsLoading(false);
         return;
@@ -153,13 +159,13 @@ export default function VendorDashboard() {
 
       if (oldOrders && oldOrders.length > 0) {
         const oldOrderIds = oldOrders.map(o => o.id);
-        
+
         // Delete order items first
         await supabase
           .from('order_items')
           .delete()
           .in('order_id', oldOrderIds);
-        
+
         // Then delete old completed orders
         await supabase
           .from('orders')
@@ -176,7 +182,7 @@ export default function VendorDashboard() {
         `)
         .eq('canteen_id', canteenData.id)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching orders:', error);
       } else {
@@ -195,7 +201,7 @@ export default function VendorDashboard() {
             .from('profiles')
             .select('id, name')
             .in('id', userIds);
-          
+
           if (profiles) {
             const customerMap: Record<string, string> = {};
             profiles.forEach((p: CustomerProfile) => {
@@ -228,7 +234,7 @@ export default function VendorDashboard() {
         async (payload) => {
           const newOrder = payload.new as any;
           const oldOrder = payload.old as any;
-          
+
           // Check if payment just became successful (payment_status changed to 'paid')
           if (newOrder.payment_status === 'paid' && oldOrder.payment_status !== 'paid') {
             // Fetch the complete order with items
@@ -237,7 +243,7 @@ export default function VendorDashboard() {
               .select(`*, order_items (*)`)
               .eq('id', newOrder.id)
               .single();
-            
+
             if (data) {
               // Add new paid order to the list
               setOrders(prev => {
@@ -248,7 +254,7 @@ export default function VendorDashboard() {
                 }
                 return [{ ...data, items: data.order_items }, ...prev];
               });
-              
+
               // Fetch customer name for notification
               let customerName = customers[data.user_id] || 'Customer';
               if (!customers[data.user_id]) {
@@ -257,32 +263,32 @@ export default function VendorDashboard() {
                   .select('id, name')
                   .eq('id', data.user_id)
                   .single();
-                
+
                 if (profile) {
                   customerName = profile.name;
                   setCustomers(prev => ({ ...prev, [profile.id]: profile.name }));
                 }
               }
-              
+
               // Format order items for notification
               const orderItems = data.order_items || [];
               const itemsSummary = orderItems
                 .map((item: any) => `${item.quantity}x ${item.name}`)
                 .join(', ');
-              
+
               // Play notification sound
               playNotificationSound();
-              
+
               // Show enhanced toast notification with student name and items
               toast.custom(
                 (t) => {
                   let startX = 0;
                   let currentX = 0;
-                  
+
                   const handleTouchStart = (e: React.TouchEvent) => {
                     startX = e.touches[0].clientX;
                   };
-                  
+
                   const handleTouchMove = (e: React.TouchEvent) => {
                     currentX = e.touches[0].clientX;
                     const diff = currentX - startX;
@@ -291,7 +297,7 @@ export default function VendorDashboard() {
                       (e.currentTarget as HTMLElement).style.opacity = `${Math.max(0, 1 - diff / 150)}`;
                     }
                   };
-                  
+
                   const handleTouchEnd = (e: React.TouchEvent) => {
                     const diff = currentX - startX;
                     if (diff > 80) {
@@ -301,11 +307,11 @@ export default function VendorDashboard() {
                       (e.currentTarget as HTMLElement).style.opacity = '1';
                     }
                   };
-                  
+
                   return (
-                    <div 
+                    <div
                       className="text-white px-3 py-2 rounded-lg shadow-lg border border-red-400/30 max-w-xs animate-in slide-in-from-top-5 duration-300 cursor-grab active:cursor-grabbing transition-opacity animate-pulse"
-                      style={{ 
+                      style={{
                         background: 'linear-gradient(to right, #ff2121, #e01b1b)',
                         animation: 'pulse 1.5s ease-in-out infinite, slide-in-from-top 0.3s ease-out'
                       }}
@@ -341,8 +347,8 @@ export default function VendorDashboard() {
         },
         (payload) => {
           setOrders(prev => {
-            const updatedOrders = prev.map(order => 
-              order.id === payload.new.id 
+            const updatedOrders = prev.map(order =>
+              order.id === payload.new.id
                 ? { ...order, ...payload.new }
                 : order
             );
@@ -372,17 +378,17 @@ export default function VendorDashboard() {
       .from('orders')
       .update({ status: 'ready' })
       .eq('id', orderId);
-    
+
     if (error) {
       toast.error('Failed to update order');
       return;
     }
 
     toast.success('Order marked as ready!');
-    
+
     // Trigger email notification to customer
     console.log("Order marked ready - triggering email for order:", orderId);
-    
+
     try {
       const { data, error: emailError } = await supabase.functions.invoke('send-brevo-email', {
         body: {
@@ -409,16 +415,16 @@ export default function VendorDashboard() {
       .from('orders')
       .update({ status: 'completed' })
       .eq('id', orderId);
-    
+
     if (error) {
       toast.error('Failed to update order');
     } else {
       // Show enhanced green success toast
       toast.custom(
         (t) => (
-          <div 
+          <div
             className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border border-green-400/30 animate-in slide-in-from-top-5 duration-300"
-            style={{ 
+            style={{
               background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
             }}
             onClick={() => toast.dismiss(t)}
@@ -464,12 +470,12 @@ export default function VendorDashboard() {
     // Update order status to 'accepted' and set ETA
     const { error } = await supabase
       .from('orders')
-      .update({ 
+      .update({
         status: 'accepted',
         estimated_ready_time: etaData
       })
       .eq('id', orderId);
-    
+
     if (error) {
       toast.error('Failed to accept order');
       return;
@@ -518,13 +524,13 @@ export default function VendorDashboard() {
 
   const handleToggleOpen = async () => {
     if (!canteen) return;
-    
+
     const newStatus = !canteen.is_open;
     const { error } = await supabase
       .from('canteens')
       .update({ is_open: newStatus })
       .eq('id', canteen.id);
-    
+
     if (error) {
       toast.error('Failed to update canteen status');
     } else {
@@ -553,17 +559,17 @@ export default function VendorDashboard() {
     const result = await verifyCanteenOrder(qrToken);
     if (result.success) {
       // Update local state to reflect the completed order
-      setOrders(prev => prev.map(order => 
-        order.id === result.orderId 
+      setOrders(prev => prev.map(order =>
+        order.id === result.orderId
           ? { ...order, status: 'completed' as const }
           : order
       ));
       // Show enhanced green success toast
       toast.custom(
         (t) => (
-          <div 
+          <div
             className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border border-green-400/30 animate-in slide-in-from-top-5 duration-300"
-            style={{ 
+            style={{
               background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
             }}
             onClick={() => toast.dismiss(t)}
@@ -613,7 +619,7 @@ export default function VendorDashboard() {
     const now = new Date();
     const eta = new Date(order.estimated_ready_time);
     const minutesRemaining = Math.floor((eta.getTime() - now.getTime()) / 60000);
-    
+
     if (minutesRemaining <= 0) return 0; // Overdue - highest priority
     if (minutesRemaining <= 5) return 1; // Warning - medium priority
     return 2; // On-time - lower priority
@@ -627,14 +633,14 @@ export default function VendorDashboard() {
       case 'completed': tabOrders = completedOrders; break;
       default: tabOrders = [];
     }
-    
+
     // Sort in-progress orders: pending first (need action), then accepted by urgency
     if (activeTab === 'pending') {
       tabOrders = [...tabOrders].sort((a, b) => {
         // Pending orders (need acceptance) first
         if (a.status === 'pending' && b.status !== 'pending') return -1;
         if (a.status !== 'pending' && b.status === 'pending') return 1;
-        
+
         // For accepted orders, sort by urgency
         if (a.status === 'accepted' && b.status === 'accepted') {
           const priorityA = getUrgencyPriority(a);
@@ -648,9 +654,9 @@ export default function VendorDashboard() {
         return 0;
       });
     }
-    
+
     if (!searchQuery.trim()) return tabOrders;
-    
+
     const query = searchQuery.toLowerCase().trim();
     return tabOrders.filter(order => {
       const customerName = customers[order.user_id]?.toLowerCase() || '';
@@ -725,14 +731,14 @@ export default function VendorDashboard() {
                 <p className="text-xs md:text-sm text-mcd-text/70 truncate">{canteen.location}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2 md:gap-4 shrink-0">
               <div className="flex items-center gap-1 md:gap-2">
                 <span className={`text-xs md:text-sm font-medium ${canteen.is_open ? 'text-green-600' : 'text-mcd-red'}`}>
                   {canteen.is_open ? 'Open' : 'Closed'}
                 </span>
-                <Switch 
-                  checked={canteen.is_open} 
+                <Switch
+                  checked={canteen.is_open}
                   onCheckedChange={handleToggleOpen}
                 />
               </div>
@@ -816,6 +822,15 @@ export default function VendorDashboard() {
           />
         </div>
 
+        {/* Membership Discount Settings */}
+        <div className="mb-6 md:mb-8">
+          <MembershipDiscountSettings
+            canteenId={canteen.id}
+            currentDiscount={(canteen as any).membership_discount ?? 5}
+            onUpdate={(discount) => setCanteen({ ...canteen, membership_discount: discount } as any)}
+          />
+        </div>
+
         {/* Complete Order by QR Code */}
         <div className="bg-white rounded-xl border border-mcd-border p-4 md:p-6 mb-6 md:mb-8 shadow-card">
           <h2 className="text-lg md:text-xl font-bold font-poppins text-mcd-text mb-1">
@@ -824,16 +839,16 @@ export default function VendorDashboard() {
           <p className="text-xs md:text-sm text-mcd-text/70 mb-3 md:mb-4">
             Scan student's QR code or enter pickup code manually
           </p>
-          
+
           {/* QR Scan Button */}
-          <Button 
+          <Button
             onClick={() => setIsScannerOpen(true)}
             className="w-full mb-4 bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 text-lg"
           >
             <QrCode className="h-6 w-6 mr-3" />
             Scan QR Code
           </Button>
-          
+
           {/* Manual Pickup Code Entry (fallback) */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -843,7 +858,7 @@ export default function VendorDashboard() {
               <span className="bg-white px-2 text-muted-foreground">or enter manually</span>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-4">
             <Input
               placeholder="Enter Pickup Code"
@@ -852,7 +867,7 @@ export default function VendorDashboard() {
               className="flex-1 bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
               onKeyDown={(e) => e.key === 'Enter' && handleCompleteByCode()}
             />
-            <Button 
+            <Button
               onClick={handleCompleteByCode}
               variant="outline"
               className="border-mcd-yellow text-mcd-text hover:bg-mcd-yellow font-bold px-6 md:px-8 w-full sm:w-auto"
@@ -898,11 +913,10 @@ export default function VendorDashboard() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
-                    isActive 
-                      ? 'bg-mcd-yellow text-mcd-text' 
-                      : 'bg-mcd-selected text-mcd-text/70 hover:bg-mcd-yellow/30'
-                  }`}
+                  className={`flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${isActive
+                    ? 'bg-mcd-yellow text-mcd-text'
+                    : 'bg-mcd-selected text-mcd-text/70 hover:bg-mcd-yellow/30'
+                    }`}
                 >
                   <Icon className={`h-3.5 w-3.5 md:h-4 md:w-4 ${isActive ? 'text-mcd-text' : 'text-mcd-red'}`} />
                   {tab.label} ({tab.count})

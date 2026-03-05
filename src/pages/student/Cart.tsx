@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { calculateFees } from '@/lib/fees';
 import { ShoppingCart, ArrowLeft, Loader2, CreditCard, Tag, X, Check, AlertTriangle, Clock, Ban } from 'lucide-react';
 import { toast } from 'sonner';
+import { MembershipBanner } from '@/components/MembershipBanner';
+import { useMembership } from '@/hooks/useMembership';
 
 // Get default prep time based on category
 const getDefaultPrepTime = (category?: string): number => {
@@ -33,7 +35,7 @@ const getPeakMultiplier = (): number => {
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const istTime = new Date(utc + (istOffset * 60000));
   const hour = istTime.getHours();
-  
+
   if (hour >= 11 && hour < 14) return 1.3;
   if (hour >= 17 && hour < 19) return 1.2;
   return 1.0;
@@ -74,6 +76,8 @@ export default function Cart() {
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [isBannedStudent, setIsBannedStudent] = useState(false);
+  const [membershipDiscount, setMembershipDiscount] = useState(5); // default ₹5
+  const { isEligibleForDiscount } = useMembership();
   const navigate = useNavigate();
 
   // Check if student is banned on mount
@@ -90,11 +94,11 @@ export default function Cart() {
   useEffect(() => {
     const fetchPendingOrders = async () => {
       if (!canteenId) return;
-      
+
       try {
         const { data, error } = await supabase
           .rpc('get_active_order_count', { p_canteen_id: canteenId });
-        
+
         if (!error && data !== null) {
           setPendingOrderCount(data);
         }
@@ -111,10 +115,10 @@ export default function Cart() {
     setAppliedCoupon(null);
     setCouponCode('');
     setAvailableCoupons([]);
-    
+
     const fetchCoupons = async () => {
       if (!canteenId) return;
-      
+
       try {
         // Fetch active coupons for this specific canteen
         const { data: coupons } = await supabase
@@ -133,7 +137,27 @@ export default function Cart() {
 
     fetchCoupons();
   }, [canteenId]);
-  
+
+  // Fetch membership discount setting from canteen
+  useEffect(() => {
+    const fetchMembershipDiscount = async () => {
+      if (!canteenId) return;
+      try {
+        const { data } = await supabase
+          .from('canteens')
+          .select('membership_discount')
+          .eq('id', canteenId)
+          .maybeSingle();
+        if (data && (data as any).membership_discount !== null) {
+          setMembershipDiscount(Number((data as any).membership_discount));
+        }
+      } catch (error) {
+        console.error('Error fetching membership discount:', error);
+      }
+    };
+    fetchMembershipDiscount();
+  }, [canteenId]);
+
   // Load Cashfree SDK
   useEffect(() => {
     const script = document.createElement('script');
@@ -168,7 +192,7 @@ export default function Cart() {
       }
     }
   }, [canteenId, getActiveCanteenIds, navigate]);
-  
+
   const items = canteenId ? getCanteenItems(canteenId) : [];
   const subtotal = canteenId ? getTotal(canteenId) : 0;
   const canteenName = canteenId ? getCanteenName(canteenId) : null;
@@ -176,16 +200,16 @@ export default function Cart() {
   // Calculate estimated time for cart items
   const estimatedTime = useMemo(() => {
     if (items.length === 0) return 0;
-    
+
     // Get max prep time from all items
     const maxPrepTime = Math.max(
       ...items.map(item => item.menuItem.prep_time || getDefaultPrepTime(item.menuItem.category))
     );
-    
+
     // Calculate: (max_prep_time + (pending_orders * 2)) * peak_multiplier
     const peakMultiplier = getPeakMultiplier();
     const totalMinutes = Math.round((maxPrepTime + (pendingOrderCount * 2)) * peakMultiplier);
-    
+
     return totalMinutes;
   }, [items, pendingOrderCount]);
 
@@ -199,7 +223,12 @@ export default function Cart() {
   };
 
   const discount = calculateDiscount();
-  const discountedAmount = Math.max(subtotal - discount, 0);
+  // Calculate membership discount
+  const membershipDiscountAmount = (isEligibleForDiscount && subtotal >= 70 && membershipDiscount > 0)
+    ? membershipDiscount
+    : 0;
+  const totalDiscount = discount + membershipDiscountAmount;
+  const discountedAmount = Math.max(subtotal - totalDiscount, 0);
   const fees = calculateFees(discountedAmount);
   const total = fees.totalPayable;
 
@@ -238,11 +267,10 @@ export default function Cart() {
 
       setAppliedCoupon(data as Coupon);
       setCouponCode('');
-      toast.success(`Coupon applied! You saved ₹${
-        data.discount_type === 'percentage' 
-          ? Math.min((subtotal * data.discount_value) / 100, subtotal).toFixed(0)
-          : Math.min(data.discount_value, subtotal).toFixed(0)
-      }`);
+      toast.success(`Coupon applied! You saved ₹${data.discount_type === 'percentage'
+        ? Math.min((subtotal * data.discount_value) / 100, subtotal).toFixed(0)
+        : Math.min(data.discount_value, subtotal).toFixed(0)
+        }`);
     } catch (error) {
       console.error('Error applying coupon:', error);
       toast.error('Failed to apply coupon. Please try again.');
@@ -295,18 +323,18 @@ export default function Cart() {
     }
 
     setIsOrdering(true);
-    
+
     try {
       const code = generatePickupCode();
       const itemIds = items.map(item => item.menuItem.id);
-      
+
       // Check canteen stock mode and validate stock for daily mode
       const { data: canteenData } = await supabase
         .from('canteens')
         .select('stock_mode')
         .eq('id', canteenId)
         .maybeSingle();
-      
+
       if (canteenData?.stock_mode === 'daily') {
         // Validate stock for each item
         for (const cartItem of items) {
@@ -315,14 +343,14 @@ export default function Cart() {
               p_menu_item_id: cartItem.menuItem.id,
               p_quantity: cartItem.quantity
             });
-          
+
           if (stockError) {
             console.error('Stock check error:', stockError);
             toast.error('Failed to validate stock. Please try again.');
             setIsOrdering(false);
             return;
           }
-          
+
           const stockResult = result as { success: boolean; error?: string; remaining?: number };
           if (!stockResult.success) {
             toast.error(`${cartItem.menuItem.name}: ${stockResult.error || 'Not available'}`);
@@ -331,18 +359,18 @@ export default function Cart() {
           }
         }
       }
-      
+
       // Calculate ETA using the database function
       const { data: etaData, error: etaError } = await supabase
         .rpc('calculate_order_eta', {
           p_canteen_id: canteenId,
           p_item_ids: itemIds,
         });
-      
+
       if (etaError) {
         console.error('Error calculating ETA:', etaError);
       }
-      
+
       // Get next daily order number for this canteen
       const { data: orderNo } = await supabase
         .rpc('get_next_canteen_order_no', { p_canteen_id: canteenId });
@@ -365,16 +393,16 @@ export default function Cart() {
         })
         .select()
         .single();
-      
+
       if (orderError) throw orderError;
 
       // Create order items with size info
       const orderItems = items.map(item => {
         const displayPrice = item.priceOverride ?? item.menuItem.price;
-        const itemName = item.size 
+        const itemName = item.size
           ? `${item.menuItem.name} (${item.size.charAt(0).toUpperCase() + item.size.slice(1)})`
           : item.menuItem.name;
-        
+
         return {
           order_id: order.id,
           menu_item_id: item.menuItem.id,
@@ -387,7 +415,7 @@ export default function Cart() {
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
-      
+
       if (itemsError) throw itemsError;
 
       // Get the return URL
@@ -421,7 +449,7 @@ export default function Cart() {
           paymentSessionId: paymentData.paymentSessionId,
           redirectTarget: '_self',
         });
-        
+
         if (result.error) {
           console.error('Cashfree checkout error:', result.error);
           toast.error(result.error.message || 'Payment failed. Please try again.');
@@ -444,7 +472,7 @@ export default function Cart() {
       <div className="min-h-screen bg-mcd-cream">
         <div className="border-b border-mcd-border bg-mcd-cream sticky top-0 z-10 shadow-card">
           <div className="container mx-auto px-4 h-[72px] md:h-24 flex items-center gap-3 md:gap-4">
-            <Link 
+            <Link
               to="/student/carts"
               className="flex items-center gap-1 md:gap-2 text-muted-foreground hover:text-mcd-red transition-colors text-sm md:text-base"
             >
@@ -478,7 +506,7 @@ export default function Cart() {
       {/* Simple Header */}
       <div className="border-b border-mcd-border bg-mcd-cream sticky top-0 z-10 shadow-card">
         <div className="container mx-auto px-4 h-[72px] md:h-24 flex items-center gap-3 md:gap-4">
-          <Link 
+          <Link
             to="/student/carts"
             className="flex items-center gap-1 md:gap-2 text-muted-foreground hover:text-mcd-red transition-colors text-sm md:text-base"
           >
@@ -491,7 +519,7 @@ export default function Cart() {
           </div>
         </div>
       </div>
-      
+
       <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-3xl">
         {/* Banned Student Warning Banner */}
         {isBannedStudent && (
@@ -515,7 +543,7 @@ export default function Cart() {
                 {isAtLimit ? 'Order limit reached' : 'Not accepting orders'}
               </p>
               <p className="text-sm text-amber-700">
-                {isAtLimit 
+                {isAtLimit
                   ? `This vendor has reached their maximum of ${orderLimit} active orders. Please check back later.`
                   : 'This vendor is currently not accepting new orders. Please check back later.'
                 }
@@ -539,18 +567,23 @@ export default function Cart() {
               </div>
             )}
           </div>
-          
+
           {/* Cart Items */}
           <div className="mb-3 md:mb-4">
             {items.map(item => {
               // Create unique key including size for shake items
-              const itemKey = item.size 
-                ? `${item.menuItem.id}-${item.size}` 
+              const itemKey = item.size
+                ? `${item.menuItem.id}-${item.size}`
                 : item.menuItem.id;
               return (
                 <CartItemRow key={itemKey} item={item} canteenId={canteenId} />
               );
             })}
+          </div>
+
+          {/* Membership Discount Banner */}
+          <div className="py-2">
+            <MembershipBanner subtotal={subtotal} membershipDiscount={membershipDiscount} />
           </div>
 
           {/* Coupon Section */}
@@ -576,17 +609,15 @@ export default function Cart() {
                             return;
                           }
                           setAppliedCoupon(coupon);
-                          toast.success(`Coupon applied! You saved ₹${
-                            coupon.discount_type === 'percentage' 
-                              ? Math.min((subtotal * coupon.discount_value) / 100, subtotal).toFixed(0)
-                              : Math.min(coupon.discount_value, subtotal).toFixed(0)
-                          }`);
+                          toast.success(`Coupon applied! You saved ₹${coupon.discount_type === 'percentage'
+                            ? Math.min((subtotal * coupon.discount_value) / 100, subtotal).toFixed(0)
+                            : Math.min(coupon.discount_value, subtotal).toFixed(0)
+                            }`);
                         }}
-                        className={`px-3 py-1.5 border border-dashed rounded-lg text-xs font-medium transition-colors ${
-                          meetsMinimum 
-                            ? 'bg-mcd-red/10 border-mcd-red text-mcd-red hover:bg-mcd-red/20'
-                            : 'bg-muted/50 border-muted-foreground/30 text-muted-foreground cursor-not-allowed'
-                        }`}
+                        className={`px-3 py-1.5 border border-dashed rounded-lg text-xs font-medium transition-colors ${meetsMinimum
+                          ? 'bg-mcd-red/10 border-mcd-red text-mcd-red hover:bg-mcd-red/20'
+                          : 'bg-muted/50 border-muted-foreground/30 text-muted-foreground cursor-not-allowed'
+                          }`}
                       >
                         {coupon.code} • {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% OFF` : `₹${coupon.discount_value} OFF`}
                         {coupon.minimum_amount > 0 && (
@@ -598,7 +629,7 @@ export default function Cart() {
                 </div>
               </div>
             )}
-            
+
             {appliedCoupon ? (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -647,9 +678,9 @@ export default function Cart() {
 
           {/* Price Summary with Fee Breakdown */}
           <div className="py-3 border-t border-mcd-border">
-            <FeeBreakdownCard fees={fees} discount={discount} />
+            <FeeBreakdownCard fees={fees} discount={totalDiscount} membershipDiscount={membershipDiscountAmount} />
           </div>
-          
+
           {/* Phone Number Input */}
           <div className="mt-4 mb-4">
             <Label htmlFor="phone" className="text-sm font-medium text-foreground">
@@ -665,9 +696,9 @@ export default function Cart() {
               maxLength={10}
             />
           </div>
-          
+
           {/* Pay Now Button */}
-          <Button 
+          <Button
             className="w-full mt-3 md:mt-4 bg-mcd-yellow hover:bg-yellow-400 text-foreground font-semibold h-11 md:h-12 rounded-xl text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handlePlaceOrder}
             disabled={isOrdering || !sdkLoaded || phoneNumber.length < 10 || !canAcceptOrders || isBannedStudent}
@@ -691,7 +722,7 @@ export default function Cart() {
               </>
             )}
           </Button>
-          
+
           {!sdkLoaded && (
             <p className="text-xs text-muted-foreground text-center mt-2">
               Loading payment gateway...

@@ -1,13 +1,17 @@
 import { FeeBreakdown } from '@/lib/fees';
-import { Info } from 'lucide-react';
+import { Info, Crown } from 'lucide-react';
 
 interface FeeBreakdownCardProps {
   fees: FeeBreakdown;
   showNetProfit?: boolean;
   discount?: number;
+  membershipDiscount?: number;
 }
 
-export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0 }: FeeBreakdownCardProps) {
+export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, membershipDiscount = 0 }: FeeBreakdownCardProps) {
+  // Separate coupon discount from membership discount
+  const couponDiscount = discount - membershipDiscount;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
@@ -15,7 +19,24 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0 }: 
         <span className="text-foreground">₹{fees.orderAmount.toFixed(2)}</span>
       </div>
 
-      {discount > 0 && (
+      {couponDiscount > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-green-600">Coupon Discount</span>
+          <span className="text-green-600">-₹{couponDiscount.toFixed(2)}</span>
+        </div>
+      )}
+
+      {membershipDiscount > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-amber-600 flex items-center gap-1">
+            <Crown className="h-3 w-3" />
+            Member Discount
+          </span>
+          <span className="text-amber-600">-₹{membershipDiscount.toFixed(2)}</span>
+        </div>
+      )}
+
+      {discount > 0 && couponDiscount <= 0 && membershipDiscount <= 0 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-green-600">Discount</span>
           <span className="text-green-600">-₹{discount.toFixed(2)}</span>
@@ -50,3 +71,4 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0 }: 
     </div>
   );
 }
+
