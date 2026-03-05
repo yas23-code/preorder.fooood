@@ -12,8 +12,6 @@ interface Profile {
   role: UserRole;
   created_at: string;
   updated_at: string;
-  membership_status?: string;
-  membership_purchase_date?: string | null;
 }
 
 interface AuthContextType {

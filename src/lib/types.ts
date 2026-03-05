@@ -8,8 +8,6 @@ export interface Profile {
   role: UserRole;
   created_at: string;
   updated_at: string;
-  membership_status?: string;
-  membership_purchase_date?: string | null;
 }
 
 export interface Canteen {
@@ -21,7 +19,6 @@ export interface Canteen {
   is_open: boolean;
   created_at: string;
   updated_at: string;
-  member_discount_value?: number;
 }
 
 export interface Category {
