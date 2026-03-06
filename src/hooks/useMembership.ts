@@ -18,7 +18,7 @@ export interface MembershipState {
     isEligibleForDiscount: boolean; // isActive && isMembershipActive
     daysRemaining: number;
     isLoading: boolean;
-    purchaseMembership: () => Promise<boolean>;
+    purchaseMembership: () => Promise<{ success: boolean; error?: string }>;
     refreshMembership: () => Promise<void>;
 }
 
@@ -85,8 +85,8 @@ export function useMembership(): MembershipState {
         fetchMembership();
     }, [fetchMembership]);
 
-    const purchaseMembership = async (): Promise<boolean> => {
-        if (!user) return false;
+    const purchaseMembership = async (): Promise<{ success: boolean; error?: string }> => {
+        if (!user) return { success: false, error: 'Not authenticated' };
 
         try {
             // Redirect to Cashfree payment
@@ -111,27 +111,37 @@ export function useMembership(): MembershipState {
                 },
             });
 
-            if (paymentError || !paymentData.paymentSessionId) {
-                console.error('Payment order creation failed:', paymentError || paymentData);
-                return false;
+            if (paymentError) {
+                console.error('Payment order creation failed:', paymentError);
+                return { success: false, error: paymentError.message || 'Payment initialization failed' };
+            }
+            if (!paymentData?.paymentSessionId) {
+                console.error('No payment session ID:', paymentData);
+                return { success: false, error: paymentData?.error || 'Failed to create payment session' };
             }
 
             // Require Cashfree SDK on frontend
             if ((window as any).Cashfree) {
                 const cashfree = (window as any).Cashfree({ mode: 'production' }); // Or 'sandbox'
-                await cashfree.checkout({
+                const result = await cashfree.checkout({
                     paymentSessionId: paymentData.paymentSessionId,
                     redirectTarget: '_self',
                 });
-                // This redirect resolves the checkout visually
-                return false;
+
+                if (result && result.error) {
+                    console.error('Cashfree error:', result.error);
+                    return { success: false, error: result.error.message || 'Payment checkout failed' };
+                }
+
+                // Hang the promise infinitely because the browser is redirecting away to Cashfree
+                return new Promise(() => { });
             } else {
                 console.error('Cashfree SDK not loaded');
-                return false;
+                return { success: false, error: 'Payment gateway SDK not loaded' };
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to purchase membership:', err);
-            return false;
+            return { success: false, error: err.message || 'An unexpected error occurred' };
         }
     };
 

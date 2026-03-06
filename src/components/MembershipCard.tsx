@@ -21,8 +21,8 @@ export function MembershipCard() {
     const handlePurchase = async () => {
         setIsPurchasing(true);
         try {
-            const success = await purchaseMembership();
-            if (success) {
+            const result = await purchaseMembership();
+            if (result.success) {
                 toast.custom(
                     (t) => (
                         <div
@@ -44,7 +44,7 @@ export function MembershipCard() {
                     { duration: 4000 }
                 );
             } else {
-                toast.error('Failed to activate membership. Please try again.');
+                toast.error(result.error || 'Failed to initialize payment. Please try again.');
             }
         } finally {
             setIsPurchasing(false);
@@ -109,8 +109,8 @@ export function MembershipCard() {
     // Active member - show status
     return (
         <div className={`relative overflow-hidden rounded-xl p-4 shadow-lg transition-all ${isEligibleForDiscount
-                ? 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600'
-                : 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-700'
+            ? 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600'
+            : 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-700'
             }`}>
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-10 translate-x-10" />
