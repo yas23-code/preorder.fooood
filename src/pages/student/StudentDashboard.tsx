@@ -31,7 +31,7 @@ import { useActiveShopOrderTimer } from '@/hooks/useActiveShopOrderTimer';
 import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 import { useOrderRejectionNotifications } from '@/hooks/useOrderRejectionNotifications';
 import { useShopOrderOverdueNotification } from '@/hooks/useShopOrderOverdueNotification';
-import { Store, Bell, Clock, LogOut, Building2, MapPin, MapPinOff } from 'lucide-react';
+import { Store, Bell, Clock, LogOut, Building2, MapPin, MapPinOff, Crown } from 'lucide-react';
 import preorderLogo from '@/assets/preorder-logo.jpg';
 
 
@@ -242,22 +242,19 @@ export default function StudentDashboard() {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-mcd-red h-11 w-11 md:h-10 md:w-10 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 relative"
+                    variant="outline"
+                    className="relative h-11 md:h-10 w-11 md:w-10 p-0 border-mcd-border hover:bg-mcd-selected min-h-[44px] md:min-h-0"
                   >
-                    <Bell className="h-6 w-6 md:h-5 md:w-5" strokeWidth={2.25} />
-                    {/* Location-aware notification count */}
-                    {((shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) +
-                      (shouldShowShopNotifications ? dismissedReadyShopOrders.length : 0)) > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-mcd-red text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                          {(shouldShowCanteenNotifications ? dismissedReadyOrders.length : 0) +
-                            (shouldShowShopNotifications ? dismissedReadyShopOrders.length : 0)}
-                        </span>
-                      )}
+                    <Bell className="h-6 w-6 md:h-5 md:w-5 text-mcd-red" strokeWidth={2.25} />
+                    {(visibleReadyOrders.length > 0 || visibleReadyShopOrders.length > 0) && (
+                      <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mcd-red opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mcd-red border-2 border-white"></span>
+                      </span>
+                    )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                <PopoverContent className="w-80 p-0 mr-4 mt-2" align="end">
                   <div className="p-3 border-b border-mcd-border flex items-center justify-between">
                     <h3 className="font-semibold text-sm">Notifications</h3>
                     <Button
@@ -322,6 +319,15 @@ export default function StudentDashboard() {
                   </div>
                 </PopoverContent>
               </Popover>
+
+              <Button
+                variant="outline"
+                onClick={() => navigate('/student/membership')}
+                className="flex items-center gap-1.5 md:gap-2 h-11 md:h-10 px-3 md:px-4 text-sm border-mcd-border hover:bg-mcd-selected min-h-[44px] md:min-h-0"
+              >
+                <Crown className="h-6 w-6 md:h-5 md:w-5 text-amber-500" strokeWidth={2.25} />
+                <span className="hidden sm:inline">Membership</span>
+              </Button>
 
               <Button
                 variant="outline"

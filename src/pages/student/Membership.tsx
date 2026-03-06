@@ -84,18 +84,23 @@ export default function Membership() {
     return (
         <div className="min-h-screen bg-mcd-cream">
             {/* Header */}
-            <div className="border-b border-mcd-border bg-mcd-cream sticky top-0 z-10 shadow-card">
-                <div className="container mx-auto px-4 h-[72px] md:h-24 flex items-center gap-3 md:gap-4">
-                    <Link
-                        to="/student/dashboard"
-                        className="flex items-center gap-1 md:gap-2 text-muted-foreground hover:text-mcd-red transition-colors text-sm md:text-base"
-                    >
-                        <ArrowLeft className="h-4 w-4 text-mcd-red" />
-                        <span className="hidden sm:inline">Back</span>
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <Crown className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
-                        <h1 className="text-lg md:text-xl font-bold">Campus Membership</h1>
+            <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-mcd-border shadow-sm">
+                <div className="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Link
+                            to="/student/dashboard"
+                            className="p-2 hover:bg-mcd-selected rounded-full transition-colors group"
+                        >
+                            <ArrowLeft className="h-5 w-5 text-mcd-red group-hover:-translate-x-1 transition-transform" />
+                        </Link>
+                        <div className="flex items-center gap-2">
+                            <div className="bg-amber-100 p-1.5 rounded-lg">
+                                <Crown className="h-5 w-5 text-amber-500" />
+                            </div>
+                            <h1 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                                Campus Membership
+                            </h1>
+                        </div>
                     </div>
                 </div>
             </div>
