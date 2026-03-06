@@ -147,7 +147,7 @@ export default function Membership() {
                                                     <Check className="h-5 w-5 text-green-200" />
                                                     <div>
                                                         <p className="text-white font-medium text-sm">Discount Active</p>
-                                                        <p className="text-white/70 text-xs">₹5 off on preorders ≥₹70</p>
+                                                        <p className="text-white/70 text-xs">discount on preorders ≥₹70</p>
                                                     </div>
                                                 </div>
                                                 <div className="bg-white/20 px-3 py-1.5 rounded-lg">
@@ -214,7 +214,7 @@ export default function Membership() {
                                     <li className="flex items-start gap-3">
                                         <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
                                         <p className="text-sm text-muted-foreground">
-                                            <span className="font-medium text-foreground">Save</span> — Get ₹5 off automatically on every qualifying order
+                                            <span className="font-medium text-foreground">Save</span> — Get discount automatically on every qualifying order
                                         </p>
                                     </li>
                                     <li className="flex items-start gap-3">
