@@ -11,7 +11,7 @@ import { CanteenCardWithCapacity } from '@/components/CanteenCardWithCapacity';
 import { ActiveOrderBottomBar } from '@/components/ActiveOrderBottomBar';
 import { ActiveShopOrderBottomBar } from '@/components/ActiveShopOrderBottomBar';
 import { NearbyShopsSection } from '@/components/student/NearbyShopsSection';
-import { MembershipCard } from '@/components/MembershipCard';
+
 
 import { OrderRejectionBanner } from '@/components/OrderRejectionBanner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -393,8 +393,7 @@ export default function StudentDashboard() {
           ) : isInsideCampus === true || isInsideCampus === null ? (
             /* Inside Campus - Show ONLY Canteens */
             <div className="space-y-4">
-              {/* Membership Card */}
-              <MembershipCard />
+
 
               {/* Section Header */}
               <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
