@@ -125,7 +125,7 @@ export default function VendorDashboard() {
       // First get the vendor's canteen
       const { data: canteenData, error: canteenError } = await supabase
         .from('canteens')
-        .select('id, name, location, is_open, order_limit, is_accepting_orders, approval_status, stock_mode, membership_discount')
+        .select('*')
         .eq('vendor_id', user.id)
         .maybeSingle();
 
