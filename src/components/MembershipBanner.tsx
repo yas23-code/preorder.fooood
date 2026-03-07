@@ -1,20 +1,42 @@
 import { useMembership } from '@/hooks/useMembership';
-import { Crown, Check, ShoppingBag, Sparkles } from 'lucide-react';
+import { Crown, Check, ShoppingBag, Sparkles, Clock } from 'lucide-react';
 
 interface MembershipBannerProps {
     subtotal: number;
     membershipDiscount: number; // from vendor's canteen settings
+    startTime?: string | null;  // HH:MM:SS or HH:MM — vendor-set time restriction
 }
 
-export function MembershipBanner({ subtotal, membershipDiscount }: MembershipBannerProps) {
+// Helper: format "HH:MM:SS" or "HH:MM" → "5:00 PM"
+function formatTime(t: string) {
+    const [h, m] = t.split(':').map(Number);
+    const displayH = h % 12 || 12;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+// Helper: is current IST time before startTime?
+function isTooEarly(startTime: string): boolean {
+    const now = new Date();
+    const istOffset = 5.5 * 60;
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const istTime = new Date(utc + istOffset * 60000);
+    const currentH = istTime.getHours();
+    const currentM = istTime.getMinutes();
+    const [startH, startM] = startTime.split(':').map(Number);
+    return currentH < startH || (currentH === startH && currentM < startM);
+}
+
+export function MembershipBanner({ subtotal, membershipDiscount, startTime }: MembershipBannerProps) {
     const { isActive, isMembershipActive, isEligibleForDiscount, isLoading } = useMembership();
 
     if (isLoading || !isActive) return null;
 
     const meetsMinimumOrder = subtotal >= 70;
-    const canApplyDiscount = isEligibleForDiscount && meetsMinimumOrder && membershipDiscount > 0;
+    const tooEarly = !!startTime && isTooEarly(startTime);
+    const canApplyDiscount = isEligibleForDiscount && meetsMinimumOrder && membershipDiscount > 0 && !tooEarly;
 
-    // Eligible for discount - show success banner
+    // ✅ Eligible & discount active
     if (canApplyDiscount) {
         return (
             <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-3">
@@ -40,7 +62,26 @@ export function MembershipBanner({ subtotal, membershipDiscount }: MembershipBan
         );
     }
 
-    // Is a member but doesn't meet conditions - show info banner
+    // ⏰ Member is eligible but it's too early (vendor time restriction)
+    if (isEligibleForDiscount && meetsMinimumOrder && tooEarly && startTime) {
+        return (
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-3 flex items-start gap-3">
+                <div className="bg-purple-100 p-1.5 rounded-lg flex-shrink-0 mt-0.5">
+                    <Clock className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-purple-700">
+                        Discount available after {formatTime(startTime)}
+                    </p>
+                    <p className="text-xs text-purple-600 mt-0.5">
+                        Your ₹{membershipDiscount} member discount will be active after {formatTime(startTime)}.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // 🛍 Member but no qualifying recent order
     if (isActive && !isMembershipActive) {
         return (
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
@@ -60,7 +101,7 @@ export function MembershipBanner({ subtotal, membershipDiscount }: MembershipBan
         );
     }
 
-    // Is a member with activity but order is below ₹70
+    // 📦 Member with activity but order below ₹70
     if (isActive && isMembershipActive && !meetsMinimumOrder) {
         return (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 flex items-start gap-3">
@@ -73,6 +114,7 @@ export function MembershipBanner({ subtotal, membershipDiscount }: MembershipBan
                     </p>
                     <p className="text-xs text-blue-600 mt-0.5">
                         Add ₹{(70 - subtotal).toFixed(0)} more to get ₹{membershipDiscount} member discount
+                        {startTime ? ` (after ${formatTime(startTime)})` : ''}
                     </p>
                 </div>
             </div>

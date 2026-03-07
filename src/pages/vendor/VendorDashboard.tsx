@@ -52,7 +52,8 @@ interface Canteen {
   is_accepting_orders: boolean;
   approval_status: 'pending' | 'approved' | 'rejected';
   stock_mode: 'simple' | 'daily';
-  membership_discount?: number;
+  membership_discount?: number | null;
+  membership_discount_start_time?: string | null;
 }
 
 interface CustomerProfile {
@@ -826,8 +827,12 @@ export default function VendorDashboard() {
         <div className="mb-6 md:mb-8">
           <MembershipDiscountSettings
             canteenId={canteen.id}
-            currentDiscount={(canteen as any).membership_discount ?? 5}
-            onUpdate={(discount) => setCanteen({ ...canteen, membership_discount: discount } as any)}
+            currentDiscount={canteen.membership_discount ?? 5}
+            onUpdate={(discount, startTime) => setCanteen({
+              ...canteen,
+              membership_discount: discount,
+              membership_discount_start_time: startTime
+            })}
           />
         </div>
 

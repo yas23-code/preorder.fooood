@@ -77,6 +77,7 @@ export default function Cart() {
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [isBannedStudent, setIsBannedStudent] = useState(false);
   const [membershipDiscount, setMembershipDiscount] = useState(5); // default ₹5
+  const [membershipDiscountStartTime, setMembershipDiscountStartTime] = useState<string | null>(null);
   const { isEligibleForDiscount } = useMembership();
   const navigate = useNavigate();
 
@@ -145,11 +146,18 @@ export default function Cart() {
       try {
         const { data } = await supabase
           .from('canteens')
-          .select('membership_discount')
+          .select('membership_discount, membership_discount_start_time')
           .eq('id', canteenId)
           .maybeSingle();
-        if (data && (data as any).membership_discount !== null) {
-          setMembershipDiscount(Number((data as any).membership_discount));
+        if (data) {
+          if (data.membership_discount !== null && data.membership_discount !== undefined) {
+            setMembershipDiscount(Number(data.membership_discount));
+          }
+          if (data.membership_discount_start_time) {
+            setMembershipDiscountStartTime(data.membership_discount_start_time);
+          } else {
+            setMembershipDiscountStartTime(null);
+          }
         }
       } catch (error) {
         console.error('Error fetching membership discount:', error);
@@ -223,10 +231,23 @@ export default function Cart() {
   };
 
   const discount = calculateDiscount();
-  // Calculate membership discount
-  const membershipDiscountAmount = (isEligibleForDiscount && subtotal >= 70 && membershipDiscount > 0)
-    ? membershipDiscount
-    : 0;
+
+  // Calculate membership discount — also respects vendor's time restriction
+  const membershipDiscountAmount = useMemo(() => {
+    if (!isEligibleForDiscount || subtotal < 70 || membershipDiscount <= 0) return 0;
+    // Check time restriction
+    if (membershipDiscountStartTime) {
+      const now = new Date();
+      const istOffset = 5.5 * 60;
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const istTime = new Date(utc + istOffset * 60000);
+      const currentH = istTime.getHours();
+      const currentM = istTime.getMinutes();
+      const [startH, startM] = membershipDiscountStartTime.split(':').map(Number);
+      if (currentH < startH || (currentH === startH && currentM < startM)) return 0;
+    }
+    return membershipDiscount;
+  }, [isEligibleForDiscount, subtotal, membershipDiscount, membershipDiscountStartTime]);
   const totalDiscount = discount + membershipDiscountAmount;
   const discountedAmount = Math.max(subtotal - totalDiscount, 0);
   const fees = calculateFees(discountedAmount);
@@ -583,7 +604,11 @@ export default function Cart() {
 
           {/* Membership Discount Banner */}
           <div className="py-2">
-            <MembershipBanner subtotal={subtotal} membershipDiscount={membershipDiscount} />
+            <MembershipBanner
+              subtotal={subtotal}
+              membershipDiscount={membershipDiscount}
+              startTime={membershipDiscountStartTime}
+            />
           </div>
 
           {/* Coupon Section */}

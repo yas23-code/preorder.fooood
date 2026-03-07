@@ -59,6 +59,8 @@ export type Database = {
           is_accepting_orders: boolean
           is_open: boolean
           location: string
+          membership_discount: number | null
+          membership_discount_start_time: string | null
           name: string
           order_limit: number | null
           stock_mode: string
@@ -74,6 +76,8 @@ export type Database = {
           is_accepting_orders?: boolean
           is_open?: boolean
           location: string
+          membership_discount?: number | null
+          membership_discount_start_time?: string | null
           name: string
           order_limit?: number | null
           stock_mode?: string
@@ -89,6 +93,8 @@ export type Database = {
           is_accepting_orders?: boolean
           is_open?: boolean
           location?: string
+          membership_discount?: number | null
+          membership_discount_start_time?: string | null
           name?: string
           order_limit?: number | null
           stock_mode?: string
