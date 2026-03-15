@@ -93,6 +93,46 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check if this is a wallet top-up payment
+    if (orderId.includes('_wallet_')) {
+      if (isPaid) {
+        // Extract userId from orderId (format: {userId}_wallet_{timestamp})
+        const userId = orderId.split('_wallet_')[0];
+        const amount = Number(cashfreeData.order_amount);
+
+        // Calculate bonus
+        let bonus = 0;
+        if (amount >= 500) bonus = amount * 0.10;
+        else if (amount >= 300) bonus = amount * 0.07;
+        else if (amount >= 100) bonus = amount * 0.05;
+
+        console.log(`Loading wallet for user: ${userId}, amount: ${amount}, bonus: ${bonus}`);
+
+        const { data: newBalance, error: loadError } = await supabase
+          .rpc('load_wallet_balance', {
+            p_user_id: userId,
+            p_amount: amount,
+            p_bonus: bonus,
+            p_description: `Wallet top-up of ₹${amount}`
+          });
+
+        if (loadError) {
+          console.error('Error loading wallet balance:', loadError);
+        } else {
+          console.log(`New balance for user ${userId}: ${newBalance}`);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: isPaid,
+          orderStatus: cashfreeData.order_status,
+          paymentStatus: isPaid ? 'paid' : cashfreeData.order_status.toLowerCase(),
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Extract customer phone from Cashfree response
     const customerPhone = cashfreeData.customer_details?.customer_phone || null;
     console.log('Customer phone from Cashfree:', customerPhone);

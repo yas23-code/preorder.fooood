@@ -10,6 +10,8 @@ interface Profile {
   email: string;
   name: string;
   role: UserRole;
+  phone?: string | null;
+  wallet_balance?: number;
   created_at: string;
   updated_at: string;
 }

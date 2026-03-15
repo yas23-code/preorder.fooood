@@ -25,6 +25,7 @@ import Carts from "./pages/student/Carts";
 import StudentOrders from "./pages/student/StudentOrders";
 import PaymentResult from "./pages/student/PaymentResult";
 import Membership from "./pages/student/Membership";
+import Wallet from "./pages/student/Wallet";
 
 // Vendor Pages
 import VendorDashboard from "./pages/vendor/VendorDashboard";
@@ -162,6 +163,14 @@ const App = () => (
                     element={
                       <ProtectedRoute allowedRole="student">
                         <Membership />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/student/wallet"
+                    element={
+                      <ProtectedRoute allowedRole="student">
+                        <Wallet />
                       </ProtectedRoute>
                     }
                   />

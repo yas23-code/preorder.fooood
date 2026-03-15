@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCanteenOrderStatus } from '@/hooks/useCanteenOrderStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateFees } from '@/lib/fees';
-import { ShoppingCart, ArrowLeft, Loader2, CreditCard, Tag, X, Check, AlertTriangle, Clock, Ban } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Loader2, CreditCard, Tag, X, Check, AlertTriangle, Clock, Ban, Wallet as WalletIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { MembershipBanner } from '@/components/MembershipBanner';
 import { useMembership } from '@/hooks/useMembership';
@@ -79,6 +79,8 @@ export default function Cart() {
   const [membershipDiscount, setMembershipDiscount] = useState(5); // default ₹5
   const [membershipDiscountStartTime, setMembershipDiscountStartTime] = useState<string | null>(null);
   const { isEligibleForDiscount } = useMembership();
+  const [paymentMethod, setPaymentMethod] = useState<'cashfree' | 'wallet'>('cashfree');
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const navigate = useNavigate();
 
   // Check if student is banned on mount
@@ -110,6 +112,7 @@ export default function Cart() {
 
     fetchPendingOrders();
   }, [canteenId]);
+
   // Reset coupon state and fetch available coupons when canteen changes
   useEffect(() => {
     // Reset coupon state when switching canteens
@@ -221,6 +224,23 @@ export default function Cart() {
     return totalMinutes;
   }, [items, pendingOrderCount]);
 
+  // Fetch wallet balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!user) return;
+      const { data } = await (supabase
+        .from('profiles')
+        .select('wallet_balance')
+        .eq('id', user.id)
+        .maybeSingle() as any);
+      if (data && data.wallet_balance !== undefined) {
+        setWalletBalance(data.wallet_balance);
+        // If balance is enough and >= total, maybe default to wallet
+      }
+    };
+    fetchBalance();
+  }, [user]);
+
   // Calculate discount
   const calculateDiscount = () => {
     if (!appliedCoupon) return 0;
@@ -248,9 +268,31 @@ export default function Cart() {
     }
     return membershipDiscount;
   }, [isEligibleForDiscount, subtotal, membershipDiscount, membershipDiscountStartTime]);
+
   const totalDiscount = discount + membershipDiscountAmount;
   const discountedAmount = Math.max(subtotal - totalDiscount, 0);
-  const fees = calculateFees(discountedAmount);
+
+  // When using wallet, we bypass PG fees and keep platform fee internal
+  // For now, let's keep it simple: if wallet, pgFee = 0, platformFee = 0 (as per the prompt: "every order paid from the wallet bypasses Cashfree entirely — that's your ₹3 platform fee gone")
+  // Actually, the prompt says "bypasses Cashfree entirely — that's your ₹3 platform fee gone, which is the single biggest visible price difference. You keep the ₹3 internally, the student doesn't see it on checkout."
+  // Wait, if the student doesn't see it, it means it's not added to the total?
+  // "This one feature can cut the price gap by ₹3-5 per order immediately."
+  // So for wallet, total = discountedAmount. No fees.
+
+  const fees = useMemo(() => {
+    if (paymentMethod === 'wallet') {
+      return {
+        subtotal: discountedAmount,
+        platformFee: 0,
+        pgFee: 0,
+        totalPayable: discountedAmount,
+        netProfit: discountedAmount,
+        orderAmount: discountedAmount
+      } as any;
+    }
+    return calculateFees(discountedAmount);
+  }, [discountedAmount, paymentMethod]);
+
   const total = fees.totalPayable;
 
   const generatePickupCode = () => {
@@ -462,6 +504,22 @@ export default function Cart() {
       }
 
       console.log('Payment session created:', paymentData);
+
+      if (paymentMethod === 'wallet') {
+        const { data: walletResult, error: walletError } = await ((supabase as any)
+          .rpc('pay_with_wallet', { p_order_id: order.id, p_user_id: user.id }) as Promise<any>);
+
+        if (walletError || !walletResult.success) {
+          console.error('Wallet payment failed:', walletError || walletResult);
+          toast.error(walletResult?.error || 'Wallet payment failed');
+          setIsOrdering(false);
+          return;
+        }
+
+        toast.success('Order placed successfully using wallet!');
+        navigate('/student/dashboard', { state: { orderSuccess: true } });
+        return;
+      }
 
       // Initialize Cashfree and redirect to checkout
       if (window.Cashfree) {
@@ -722,11 +780,54 @@ export default function Cart() {
             />
           </div>
 
+          {/* Payment Method Selection */}
+          <div className="py-4 border-t border-mcd-border">
+            <Label className="text-sm font-bold text-foreground mb-3 block">Payment Method</Label>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('cashfree')}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${paymentMethod === 'cashfree' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${paymentMethod === 'cashfree' ? 'bg-mcd-red text-white' : 'bg-mcd-cream text-mcd-red'}`}>
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-sm">Online Payment</p>
+                    <p className="text-[10px] text-muted-foreground">UPI, Card, Netbanking</p>
+                  </div>
+                </div>
+                {paymentMethod === 'cashfree' && <Check className="h-5 w-5 text-mcd-red" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('wallet')}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${paymentMethod === 'wallet' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${paymentMethod === 'wallet' ? 'bg-mcd-red text-white' : 'bg-mcd-cream text-mcd-red'}`}>
+                    <WalletIcon className="h-5 w-5" />
+                  </div>
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm">Prepaid Wallet</p>
+                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">FEES OFF</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Balance: ₹{walletBalance.toFixed(2)}</p>
+                  </div>
+                </div>
+                {paymentMethod === 'wallet' && <Check className="h-5 w-5 text-mcd-red" />}
+              </button>
+            </div>
+          </div>
+
           {/* Pay Now Button */}
           <Button
             className="w-full mt-3 md:mt-4 bg-mcd-yellow hover:bg-yellow-400 text-foreground font-semibold h-11 md:h-12 rounded-xl text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handlePlaceOrder}
-            disabled={isOrdering || !sdkLoaded || phoneNumber.length < 10 || !canAcceptOrders || isBannedStudent}
+            disabled={isOrdering || (paymentMethod === 'cashfree' && !sdkLoaded) || phoneNumber.length < 10 || !canAcceptOrders || isBannedStudent || (paymentMethod === 'wallet' && walletBalance < total)}
           >
             {isOrdering ? (
               <>
@@ -740,6 +841,8 @@ export default function Cart() {
               </>
             ) : !canAcceptOrders ? (
               'Orders Not Available'
+            ) : paymentMethod === 'wallet' && walletBalance < total ? (
+              'Insufficient Wallet Balance'
             ) : (
               <>
                 <CreditCard className="mr-2 h-4 w-4 md:h-5 md:w-5" />
