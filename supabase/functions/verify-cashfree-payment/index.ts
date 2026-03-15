@@ -94,10 +94,20 @@ Deno.serve(async (req) => {
     }
 
     // Check if this is a wallet top-up payment
-    if (orderId.includes('_wallet_')) {
+    if (orderId.includes('_wallet_') || orderId.startsWith('WAL_')) {
       if (isPaid) {
-        // Extract userId from orderId (format: {userId}_wallet_{timestamp})
-        const userId = orderId.split('_wallet_')[0];
+        // Try to get userId from customer_id first (for new formats), then fallback to older split logic
+        const userId = cashfreeData.customer_details?.customer_id ||
+          (orderId.includes('_wallet_') ? orderId.split('_wallet_')[0] : null);
+
+        if (!userId) {
+          console.error('Could not determine userId for wallet top-up');
+          return new Response(
+            JSON.stringify({ error: 'User identification failed' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         const amount = Number(cashfreeData.order_amount);
 
         // Calculate bonus

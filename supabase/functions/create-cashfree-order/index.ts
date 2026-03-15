@@ -12,6 +12,7 @@ interface CreateOrderRequest {
   customerEmail: string;
   customerPhone: string;
   returnUrl: string;
+  customerId?: string;
 }
 
 Deno.serve(async (req) => {
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { orderId, amount, customerName, customerEmail, customerPhone, returnUrl }: CreateOrderRequest = await req.json();
+    const { orderId, amount, customerName, customerEmail, customerPhone, returnUrl, customerId }: CreateOrderRequest = await req.json();
 
     console.log('Creating Cashfree order:', { orderId, amount, customerName, customerEmail });
 
@@ -52,7 +53,7 @@ Deno.serve(async (req) => {
       order_amount: amount,
       order_currency: 'INR',
       customer_details: {
-        customer_id: orderId.split('_')[0], // Use part of order ID as customer ID
+        customer_id: customerId || orderId.split('_')[0], // Use customerId or part of order ID
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,

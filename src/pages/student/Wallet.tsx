@@ -35,7 +35,7 @@ export default function Wallet() {
     }, [user]);
 
     useEffect(() => {
-        if (orderIdParam && orderIdParam.includes('_wallet_')) {
+        if (orderIdParam && (orderIdParam.includes('_wallet_') || orderIdParam.startsWith('WAL_'))) {
             verifyWalletPayment(orderIdParam);
         }
     }, [orderIdParam]);
@@ -101,7 +101,7 @@ export default function Wallet() {
 
         setIsTopUpLoading(true);
         try {
-            const orderId = `${user.id}_wallet_${Date.now()}`;
+            const orderId = `WAL_${Date.now()}`;
             const returnUrl = `${window.location.origin}/student/wallet?order_id=${orderId}`;
 
             const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-cashfree-order', {
@@ -112,6 +112,7 @@ export default function Wallet() {
                     customerEmail: profile.email,
                     customerPhone: profile.phone || '9999999999', // Fallback or prompt for phone
                     returnUrl,
+                    customerId: user.id
                 },
             });
 
