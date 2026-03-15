@@ -102,7 +102,7 @@ export default function Wallet() {
         setIsTopUpLoading(true);
         try {
             const orderId = `${user.id}_wallet_${Date.now()}`;
-            const returnUrl = `${window.location.origin}/student/wallet`;
+            const returnUrl = `${window.location.origin}/student/wallet?order_id=${orderId}`;
 
             const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-cashfree-order', {
                 body: {
