@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -25,11 +25,46 @@ export default function Wallet() {
     const [isTopUpLoading, setIsTopUpLoading] = useState(false);
     const [customAmount, setCustomAmount] = useState<string>('');
 
+    const [searchParams, setSearchParams] = useSearchParams();
+    const orderIdParam = searchParams.get('order_id');
+
     useEffect(() => {
         if (user) {
             fetchWalletData();
         }
     }, [user]);
+
+    useEffect(() => {
+        if (orderIdParam && orderIdParam.includes('_wallet_')) {
+            verifyWalletPayment(orderIdParam);
+        }
+    }, [orderIdParam]);
+
+    const verifyWalletPayment = async (orderId: string) => {
+        setIsLoading(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('verify-cashfree-payment', {
+                body: { orderId },
+            });
+
+            if (error) throw error;
+
+            if (data.success) {
+                toast.success('Wallet loaded successfully!');
+                await fetchWalletData();
+                // Remove order_id from URL
+                setSearchParams({}, { replace: true });
+            } else {
+                toast.error('Payment was not completed');
+                setSearchParams({}, { replace: true });
+            }
+        } catch (error) {
+            console.error('Error verifying wallet payment:', error);
+            toast.error('Failed to verify payment');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const fetchWalletData = async () => {
         setIsLoading(true);
