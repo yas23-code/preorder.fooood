@@ -12,7 +12,7 @@ A modern campus food pre-ordering platform that connects students with canteen v
 **preorder.food** is a full-stack web application designed to streamline the food ordering experience in educational institutions. Students can browse menus, place orders, and track their order status in real-time, while vendors can manage their menu items, process orders, and control their canteen operations efficiently.
 
 ### Live Demo
-🔗 [https://uni-food-link.lovable.app](https://uni-food-link.lovable.app)
+🔗 https://www.preorder.food/
 
 ---
 
@@ -202,7 +202,7 @@ preorder.food/
 
 ### Environment Variables
 
-The project uses Lovable Cloud, which automatically manages environment variables. For local development or self-hosting, you'll need:
+The project uses supabase Cloud, which automatically manages environment variables. For local development or self-hosting, you'll need:
 
 ```env
 VITE_SUPABASE_URL=your_supabase_url
@@ -281,7 +281,6 @@ This project is proprietary software. All rights reserved.
 
 ## 🙏 Acknowledgments
 
-- Built with [Lovable](https://lovable.dev)
 - UI components from [shadcn/ui](https://ui.shadcn.com)
 - Icons by [Lucide](https://lucide.dev)
 
