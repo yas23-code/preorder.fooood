@@ -481,7 +481,32 @@ export default function Cart() {
 
       if (itemsError) throw itemsError;
 
-      // Get the return URL
+      // Handle wallet payment (no Cashfree needed)
+      if (paymentMethod === 'wallet') {
+        try {
+          const { data: walletResult, error: walletError } = await ((supabase as any)
+            .rpc('pay_with_wallet', { p_order_id: order.id, p_user_id: user.id }) as Promise<any>);
+
+          if (walletError || !walletResult?.success) {
+            console.error('Wallet payment failed:', walletError || walletResult);
+            toast.error(walletResult?.error || 'Wallet payment failed. Please check your balance.');
+            setIsOrdering(false);
+            return;
+          }
+
+          toast.success('Order placed successfully using wallet!');
+          if (canteenId) clearCart(canteenId);
+          navigate('/student/orders');
+          return;
+        } catch (walletErr) {
+          console.error('Wallet payment error:', walletErr);
+          toast.error('Wallet payment failed. Please try again.');
+          setIsOrdering(false);
+          return;
+        }
+      }
+
+      // Get the return URL (only for Cashfree payments)
       const returnUrl = `${window.location.origin}/student/payment-result?order_id=${order.id}`;
 
       // Create Cashfree payment order
@@ -496,7 +521,7 @@ export default function Cart() {
         },
       });
 
-      if (paymentError || !paymentData.paymentSessionId) {
+      if (paymentError || !paymentData?.paymentSessionId) {
         console.error('Payment order creation failed:', paymentError || paymentData);
         toast.error('Failed to initialize payment. Please try again.');
         setIsOrdering(false);
@@ -505,25 +530,9 @@ export default function Cart() {
 
       console.log('Payment session created:', paymentData);
 
-      if (paymentMethod === 'wallet') {
-        const { data: walletResult, error: walletError } = await ((supabase as any)
-          .rpc('pay_with_wallet', { p_order_id: order.id, p_user_id: user.id }) as Promise<any>);
-
-        if (walletError || !walletResult.success) {
-          console.error('Wallet payment failed:', walletError || walletResult);
-          toast.error(walletResult?.error || 'Wallet payment failed');
-          setIsOrdering(false);
-          return;
-        }
-
-        toast.success('Order placed successfully using wallet!');
-        navigate('/student/dashboard', { state: { orderSuccess: true } });
-        return;
-      }
-
       // Initialize Cashfree and redirect to checkout
       if (window.Cashfree) {
-        const cashfree = window.Cashfree({ mode: 'production' }); // Use 'sandbox' for testing
+        const cashfree = window.Cashfree({ mode: 'production' });
         const result = await cashfree.checkout({
           paymentSessionId: paymentData.paymentSessionId,
           redirectTarget: '_self',
