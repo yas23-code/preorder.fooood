@@ -128,6 +128,14 @@ Deno.serve(async (req) => {
 
         if (loadError) {
           console.error('Error loading wallet balance:', loadError);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'Failed to update wallet balance in database',
+              details: loadError
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         } else {
           console.log(`New balance for user ${userId}: ${newBalance}`);
         }

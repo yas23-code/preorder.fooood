@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    if (!orderId.includes('_mem_')) {
+    if (!orderId.includes('_mem_') && !orderId.startsWith('WAL_')) {
       const { error: updateError } = await supabase
         .from('orders')
         .update({

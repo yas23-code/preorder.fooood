@@ -23,6 +23,7 @@ export default function Wallet() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isTopUpLoading, setIsTopUpLoading] = useState(false);
+    const [verifyingPayment, setVerifyingPayment] = useState(false);
     const [customAmount, setCustomAmount] = useState<string>('');
 
     const [searchParams, setSearchParams] = useSearchParams();
@@ -41,7 +42,7 @@ export default function Wallet() {
     }, [orderIdParam]);
 
     const verifyWalletPayment = async (orderId: string) => {
-        setIsLoading(true);
+        setVerifyingPayment(true);
         try {
             const { data, error } = await supabase.functions.invoke('verify-cashfree-payment', {
                 body: { orderId },
@@ -52,17 +53,16 @@ export default function Wallet() {
             if (data.success) {
                 toast.success('Wallet loaded successfully!');
                 await fetchWalletData();
-                // Remove order_id from URL
                 setSearchParams({}, { replace: true });
             } else {
-                toast.error('Payment was not completed');
+                toast.error(data.error || 'Payment was not completed');
                 setSearchParams({}, { replace: true });
             }
         } catch (error) {
             console.error('Error verifying wallet payment:', error);
             toast.error('Failed to verify payment');
         } finally {
-            setIsLoading(false);
+            setVerifyingPayment(false);
         }
     };
 
@@ -146,6 +146,18 @@ export default function Wallet() {
 
     return (
         <div className="min-h-screen bg-mcd-cream pb-20">
+            {/* Verification Overlay */}
+            {verifyingPayment && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 text-center">
+                    <div className="bg-white rounded-2xl p-8 max-w-sm w-full space-y-4 shadow-2xl">
+                        <Loader2 className="h-12 w-12 animate-spin text-mcd-red mx-auto" />
+                        <h3 className="text-xl font-bold">Verifying Payment</h3>
+                        <p className="text-muted-foreground text-sm">
+                            Please wait while we confirm your top-up. Do not refresh or close this page.
+                        </p>
+                    </div>
+                </div>
+            )}
             <div className="border-b border-mcd-border bg-white sticky top-0 z-10 shadow-sm">
                 <div className="container mx-auto px-4 h-16 flex items-center gap-4">
                     <Link to="/student/dashboard" className="p-2 hover:bg-mcd-cream rounded-full transition-colors">
