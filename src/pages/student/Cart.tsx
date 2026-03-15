@@ -495,8 +495,7 @@ export default function Cart() {
           }
 
           toast.success('Order placed successfully using wallet!');
-          if (canteenId) clearCart(canteenId);
-          navigate('/student/orders');
+          navigate(`/student/payment-result?order_id=${order.id}&wallet=true`);
           return;
         } catch (walletErr) {
           console.error('Wallet payment error:', walletErr);

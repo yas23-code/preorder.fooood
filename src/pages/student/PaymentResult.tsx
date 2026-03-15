@@ -19,6 +19,7 @@ export default function PaymentResult() {
   const [orderNo, setOrderNo] = useState<number | null>(null);
 
   const orderId = searchParams.get('order_id');
+  const isWalletPayment = searchParams.get('wallet') === 'true';
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -28,7 +29,36 @@ export default function PaymentResult() {
       }
 
       try {
-        // Call the verify payment edge function
+        if (isWalletPayment) {
+          // Wallet payment: order is already marked as paid by the RPC, just fetch details
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .select('qr_token, canteen_id, estimated_ready_time, status, order_no')
+            .eq('id', orderId)
+            .single();
+
+          if (orderError) {
+            console.error('Error fetching order:', orderError);
+            setStatus('failed');
+            return;
+          }
+
+          setQrToken(orderData.qr_token);
+          setCanteenId(orderData.canteen_id);
+          setEstimatedReadyTime(orderData.estimated_ready_time);
+          setOrderStatus(orderData.status);
+          setOrderNo(orderData.order_no);
+          setStatus('success');
+
+          if (orderData.canteen_id) {
+            clearCart(orderData.canteen_id);
+          }
+
+          toast.success('Order placed successfully with wallet!');
+          return;
+        }
+
+        // Call the verify payment edge function (for Cashfree payments)
         const { data, error } = await supabase.functions.invoke('verify-cashfree-payment', {
           body: { orderId },
         });
