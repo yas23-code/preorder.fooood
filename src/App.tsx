@@ -26,6 +26,7 @@ import StudentOrders from "./pages/student/StudentOrders";
 import PaymentResult from "./pages/student/PaymentResult";
 import Membership from "./pages/student/Membership";
 import Wallet from "./pages/student/Wallet";
+import WalletResult from "./pages/student/WalletResult";
 
 // Vendor Pages
 import VendorDashboard from "./pages/vendor/VendorDashboard";
@@ -178,6 +179,11 @@ const App = () => (
                   <Route
                     path="/student/payment-result"
                     element={<PaymentResult />}
+                  />
+                  {/* Wallet result is NOT protected to ensure redirect works after wallet top-up */}
+                  <Route
+                    path="/student/wallet-result"
+                    element={<WalletResult />}
                   />
 
                   {/* Vendor Routes */}
