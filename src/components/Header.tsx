@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, LogOut, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from './Logo';
 import { useAuth } from '@/context/AuthContext';
@@ -28,7 +28,7 @@ export function Header({ variant = 'default' }: HeaderProps) {
   const location = useLocation();
   const itemCount = getTotalItemCount();
   const shopItemCount = getShopTotalItemCount();
-  
+
   // Check if user is browsing shop-related pages
   const isShopPage = location.pathname.startsWith('/shop') || location.pathname.startsWith('/shops');
 
@@ -38,11 +38,10 @@ export function Header({ variant = 'default' }: HeaderProps) {
   };
 
   return (
-    <header className={`sticky top-0 z-50 backdrop-blur-sm border-b shadow-card ${
-      variant === 'landing' 
-        ? 'bg-mcd-cream border-mcd-border' 
-        : 'bg-white border-gray-200'
-    }`}>
+    <header className={`sticky top-0 z-50 backdrop-blur-sm border-b shadow-card ${variant === 'landing'
+      ? 'bg-mcd-cream border-mcd-border'
+      : 'bg-white border-gray-200'
+      }`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-[72px] md:h-24">
           <Logo />
@@ -53,14 +52,14 @@ export function Header({ variant = 'default' }: HeaderProps) {
               <>
                 {profile.role === 'student' && (
                   <>
-                    <Link 
-                      to="/student/dashboard" 
+                    <Link
+                      to="/student/dashboard"
                       className="text-mcd-text hover:text-mcd-red transition-colors font-medium"
                     >
                       Browse
                     </Link>
-                    <Link 
-                      to="/student/orders" 
+                    <Link
+                      to="/student/orders"
                       className="text-mcd-text hover:text-mcd-red transition-colors font-medium"
                     >
                       My Orders
@@ -69,14 +68,14 @@ export function Header({ variant = 'default' }: HeaderProps) {
                 )}
                 {profile.role === 'vendor' && (
                   <>
-                    <Link 
-                      to="/vendor/dashboard" 
+                    <Link
+                      to="/vendor/dashboard"
                       className="text-mcd-text hover:text-mcd-red transition-colors font-medium"
                     >
                       Orders
                     </Link>
-                    <Link 
-                      to="/vendor/menu" 
+                    <Link
+                      to="/vendor/menu"
                       className="text-mcd-text hover:text-mcd-red transition-colors font-medium"
                     >
                       Menu
@@ -86,8 +85,8 @@ export function Header({ variant = 'default' }: HeaderProps) {
               </>
             ) : (
               <>
-                <Link 
-                  to="/auth" 
+                <Link
+                  to="/auth"
                   className="text-mcd-text hover:text-mcd-red transition-colors font-medium"
                 >
                   Login
@@ -109,7 +108,15 @@ export function Header({ variant = 'default' }: HeaderProps) {
                 </Button>
               </Link>
             )}
-            
+
+            {variant === 'landing' && (
+              <Link to="/student/membership">
+                <Button variant="ghost" size="icon" className="relative bg-mcd-selected hover:bg-mcd-yellow/30 h-11 w-11 md:h-10 md:w-10 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
+                  <Crown className="h-6 w-6 md:h-5 md:w-5 text-amber-500" strokeWidth={2.25} />
+                </Button>
+              </Link>
+            )}
+
             {user && profile?.role === 'student' && (
               <Link to="/student/carts" className="relative">
                 <Button variant="ghost" size="icon" className="relative bg-mcd-selected hover:bg-mcd-yellow/30 h-11 w-11 md:h-10 md:w-10 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
@@ -151,9 +158,9 @@ export function Header({ variant = 'default' }: HeaderProps) {
             )}
 
             {/* Mobile Menu Button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="md:hidden bg-mcd-selected hover:bg-mcd-yellow/30 h-11 w-11 min-h-[44px] min-w-[44px]"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
@@ -170,22 +177,22 @@ export function Header({ variant = 'default' }: HeaderProps) {
                 <>
                   {profile.role === 'student' && (
                     <>
-                      <Link 
-                        to="/student/dashboard" 
+                      <Link
+                        to="/student/dashboard"
                         className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Browse Canteens
                       </Link>
-                      <Link 
-                        to="/student/orders" 
+                      <Link
+                        to="/student/orders"
                         className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         My Orders
                       </Link>
-                      <Link 
-                        to="/student/carts" 
+                      <Link
+                        to="/student/carts"
                         className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -195,15 +202,15 @@ export function Header({ variant = 'default' }: HeaderProps) {
                   )}
                   {profile.role === 'vendor' && (
                     <>
-                      <Link 
-                        to="/vendor/dashboard" 
+                      <Link
+                        to="/vendor/dashboard"
                         className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Orders
                       </Link>
-                      <Link 
-                        to="/vendor/menu" 
+                      <Link
+                        to="/vendor/menu"
                         className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -211,7 +218,7 @@ export function Header({ variant = 'default' }: HeaderProps) {
                       </Link>
                     </>
                   )}
-                  <button 
+                  <button
                     className="px-4 py-2 text-left text-mcd-red hover:bg-mcd-selected rounded-lg transition-colors font-medium"
                     onClick={() => {
                       handleLogout();
@@ -223,14 +230,24 @@ export function Header({ variant = 'default' }: HeaderProps) {
                 </>
               ) : (
                 <>
-                  <Link 
-                    to="/auth" 
+                  <Link
+                    to="/auth"
                     className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login / Sign Up
                   </Link>
                 </>
+              )}
+              {variant === 'landing' && (
+                <Link
+                  to="/student/membership"
+                  className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Crown className="h-4 w-4 text-amber-500" />
+                  Campus Membership
+                </Link>
               )}
             </nav>
           </div>

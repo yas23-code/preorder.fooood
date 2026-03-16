@@ -31,7 +31,7 @@ import { useActiveShopOrderTimer } from '@/hooks/useActiveShopOrderTimer';
 import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 import { useOrderRejectionNotifications } from '@/hooks/useOrderRejectionNotifications';
 import { useShopOrderOverdueNotification } from '@/hooks/useShopOrderOverdueNotification';
-import { Store, Bell, Clock, LogOut, Building2, MapPin, MapPinOff, Crown, Wallet as WalletIcon } from 'lucide-react';
+import { Store, Bell, Clock, LogOut, Building2, MapPin, MapPinOff, Wallet as WalletIcon } from 'lucide-react';
 import preorderLogo from '@/assets/preorder-logo.jpg';
 
 
@@ -329,14 +329,6 @@ export default function StudentDashboard() {
                 <span className="hidden sm:inline">Wallet</span>
               </Button>
 
-              <Button
-                variant="outline"
-                onClick={() => navigate('/student/membership')}
-                className="flex items-center gap-1.5 md:gap-2 h-11 md:h-10 px-3 md:px-3 text-sm border-mcd-border hover:bg-mcd-selected min-h-[44px] md:min-h-0"
-              >
-                <Crown className="h-6 w-6 md:h-5 md:w-5 text-amber-500" strokeWidth={2.25} />
-                <span className="hidden sm:inline">Members</span>
-              </Button>
 
               <Button
                 variant="outline"
