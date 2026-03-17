@@ -55,13 +55,14 @@ export default function StudentDashboard() {
   const location = useLocation();
 
   // College location check for canteen visibility
-  const { isInsideCampus, isLoading: isLocationLoading, collegeConfig, locationError } = useCollegeLocation();
+  const { isInsideCampus, isLoading: isLocationLoading, collegeConfig, locationError, showNearbyShops } = useCollegeLocation();
 
   const searchPlaceholder = useRandomPlaceholder();
 
   // Location-aware notifications: only fetch relevant notification type
-  const shouldShowCanteenNotifications = isInsideCampus === true || isInsideCampus === null;
-  const shouldShowShopNotifications = isInsideCampus === false;
+  // If nearby shops are disabled, we always show canteen notifications
+  const shouldShowCanteenNotifications = !showNearbyShops || isInsideCampus === true || isInsideCampus === null;
+  const shouldShowShopNotifications = showNearbyShops && isInsideCampus === false;
 
   const {
     visibleReadyOrders,
@@ -164,7 +165,8 @@ export default function StudentDashboard() {
   // Filter canteens based on search and location
   const filteredCanteens = useMemo(() => {
     // If user is outside campus and location restriction is active, show no canteens
-    if (isInsideCampus === false && collegeConfig?.is_active) {
+    // BUT only if nearby shops are enabled. If nearby shops are disabled, we always show canteens.
+    if (isInsideCampus === false && collegeConfig?.is_active && showNearbyShops) {
       return [];
     }
 
@@ -175,7 +177,7 @@ export default function StudentDashboard() {
         canteen.name.toLowerCase().includes(query) ||
         canteen.location.toLowerCase().includes(query)
     );
-  }, [searchQuery, canteens, isInsideCampus, collegeConfig]);
+  }, [searchQuery, canteens, isInsideCampus, collegeConfig, showNearbyShops]);
 
   const handleLogout = async () => {
     await logout();
@@ -391,8 +393,8 @@ export default function StudentDashboard() {
             <div className="flex justify-center py-12">
               <LoadingSpinner text="Detecting your location..." />
             </div>
-          ) : isInsideCampus === true || isInsideCampus === null ? (
-            /* Inside Campus - Show ONLY Canteens */
+          ) : !showNearbyShops || isInsideCampus === true || isInsideCampus === null ? (
+            /* Inside Campus (or nearby shops disabled) - Show ONLY Canteens */
             <div className="space-y-4">
 
 
