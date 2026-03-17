@@ -81,29 +81,12 @@ export function useGeolocation(): UseGeolocationReturn {
 
     setState(prev => ({ ...prev, loading: true, error: null, permissionDenied: false }));
 
-    // Check permission state first using Permissions API
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        console.log('[Geolocation] Permission state:', result.state);
-        if (result.state === 'denied') {
-          setState({
-            latitude: null,
-            longitude: null,
-            error: 'Location permission denied. Please enable location access in your browser settings.',
-            loading: false,
-            permissionDenied: true,
-          });
-          return;
-        }
-        // If prompt or granted, proceed with getCurrentPosition
-        requestPosition();
-      }).catch(() => {
-        // Permissions API not available, fall through to getCurrentPosition
-        requestPosition();
-      });
-    } else {
-      requestPosition();
-    }
+    // Always call getCurrentPosition() directly.
+    // On Android, this is what triggers the system-level "Turn on location" dialog.
+    // The Permissions API pre-check was incorrectly treating "location services OFF"
+    // as "permanently denied" and skipping the prompt entirely.
+    console.log('[Geolocation] Requesting position via getCurrentPosition...');
+    requestPosition();
   }, [requestPosition]);
 
   useEffect(() => {
