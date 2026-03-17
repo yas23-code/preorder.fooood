@@ -243,13 +243,13 @@ export default function StudentDashboard() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="relative h-11 md:h-10 w-11 md:w-10 p-0 border-mcd-border hover:bg-mcd-selected min-h-[44px] md:min-h-0"
+                    className="relative h-9 md:h-9 w-9 md:w-9 p-0 border-mcd-border hover:bg-mcd-selected min-h-[36px] md:min-h-0"
                   >
-                    <Bell className="h-6 w-6 md:h-5 md:w-5 text-mcd-red" strokeWidth={2.25} />
+                    <Bell className="h-4 w-4 md:h-4 md:w-4 text-mcd-red" strokeWidth={2.25} />
                     {(visibleReadyOrders.length > 0 || visibleReadyShopOrders.length > 0) && (
-                      <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                      <span className="absolute top-0.5 right-0.5 flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mcd-red opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-mcd-red border-2 border-white"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-mcd-red border-2 border-white"></span>
                       </span>
                     )}
                   </Button>
@@ -323,9 +323,9 @@ export default function StudentDashboard() {
               <Button
                 variant="outline"
                 onClick={() => navigate('/student/wallet')}
-                className="flex items-center gap-1.5 md:gap-2 h-11 md:h-10 px-3 md:px-4 text-sm border-mcd-border hover:bg-mcd-selected min-h-[44px] md:min-h-0"
+                className="flex items-center gap-1.5 md:gap-2 h-9 md:h-9 px-2.5 md:px-3 text-xs border-mcd-border hover:bg-mcd-selected min-h-[36px] md:min-h-0"
               >
-                <WalletIcon className="h-6 w-6 md:h-5 md:w-5 text-mcd-red" strokeWidth={2.25} />
+                <WalletIcon className="h-4 w-4 md:h-4 md:w-4 text-mcd-red" strokeWidth={2.25} />
                 <span className="hidden sm:inline">Wallet</span>
               </Button>
 
@@ -333,18 +333,18 @@ export default function StudentDashboard() {
               <Button
                 variant="outline"
                 onClick={() => navigate('/student/orders')}
-                className="flex items-center gap-1.5 md:gap-2 h-11 md:h-10 px-3 md:px-4 text-sm border-mcd-border hover:bg-mcd-selected min-h-[44px] md:min-h-0"
+                className="flex items-center gap-1.5 md:gap-2 h-9 md:h-9 px-2.5 md:px-3 text-xs border-mcd-border hover:bg-mcd-selected min-h-[36px] md:min-h-0"
               >
-                <Clock className="h-6 w-6 md:h-5 md:w-5 text-mcd-red" strokeWidth={2.25} />
+                <Clock className="h-4 w-4 md:h-4 md:w-4 text-mcd-red" strokeWidth={2.25} />
                 <span className="hidden sm:inline">Orders</span>
               </Button>
 
               <Button
                 variant="outline"
                 onClick={handleLogout}
-                className="flex items-center gap-1.5 md:gap-2 h-11 md:h-10 px-3 md:px-4 text-sm border-mcd-border hover:bg-mcd-selected min-h-[44px] md:min-h-0"
+                className="flex items-center gap-1.5 md:gap-2 h-9 md:h-9 px-2.5 md:px-3 text-xs border-mcd-border hover:bg-mcd-selected min-h-[36px] md:min-h-0"
               >
-                <LogOut className="h-6 w-6 md:h-5 md:w-5 text-mcd-red" strokeWidth={2.25} />
+                <LogOut className="h-4 w-4 md:h-4 md:w-4 text-mcd-red" strokeWidth={2.25} />
                 <span className="hidden sm:inline">Sign Out</span>
               </Button>
             </div>

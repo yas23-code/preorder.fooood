@@ -126,12 +126,7 @@ export default function Landing() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg" className="border-2 border-white text-white hover:bg-white/10 bg-transparent">
-                  <Link to="/student/membership" className="flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-amber-500" />
-                    View Membership Plans
-                  </Link>
-                </Button>
+
               </div>
 
               {/* Customer Support Button */}
