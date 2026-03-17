@@ -22,43 +22,7 @@ export function useGeolocation(): UseGeolocationReturn {
     permissionDenied: false,
   });
 
-  const getLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setState(prev => ({
-        ...prev,
-        error: 'Geolocation is not supported by your browser',
-        loading: false,
-      }));
-      return;
-    }
-
-    setState(prev => ({ ...prev, loading: true, error: null, permissionDenied: false }));
-
-    // Check permission state first using Permissions API
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        console.log('[Geolocation] Permission state:', result.state);
-        if (result.state === 'denied') {
-          setState({
-            latitude: null,
-            longitude: null,
-            error: 'Location permission denied. Please enable location access in your browser settings.',
-            loading: false,
-            permissionDenied: true,
-          });
-          return;
-        }
-        // If prompt or granted, proceed with getCurrentPosition
-        requestPosition();
-      }).catch(() => {
-        // Permissions API not available, fall through to getCurrentPosition
-        requestPosition();
-      });
-    } else {
-      requestPosition();
-    }
-  }, []);
-
+  // Define requestPosition FIRST so getLocation can reference it
   const requestPosition = useCallback(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -104,6 +68,43 @@ export function useGeolocation(): UseGeolocationReturn {
       }
     );
   }, []);
+
+  const getLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setState(prev => ({
+        ...prev,
+        error: 'Geolocation is not supported by your browser',
+        loading: false,
+      }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, loading: true, error: null, permissionDenied: false }));
+
+    // Check permission state first using Permissions API
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        console.log('[Geolocation] Permission state:', result.state);
+        if (result.state === 'denied') {
+          setState({
+            latitude: null,
+            longitude: null,
+            error: 'Location permission denied. Please enable location access in your browser settings.',
+            loading: false,
+            permissionDenied: true,
+          });
+          return;
+        }
+        // If prompt or granted, proceed with getCurrentPosition
+        requestPosition();
+      }).catch(() => {
+        // Permissions API not available, fall through to getCurrentPosition
+        requestPosition();
+      });
+    } else {
+      requestPosition();
+    }
+  }, [requestPosition]);
 
   useEffect(() => {
     getLocation();
