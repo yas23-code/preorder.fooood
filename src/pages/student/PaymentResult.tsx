@@ -22,11 +22,20 @@ export default function PaymentResult() {
   const isWalletPayment = searchParams.get('wallet') === 'true';
 
   useEffect(() => {
-    const verifyPayment = async () => {
-      if (!orderId) {
-        setStatus('failed');
+    let isMounted = true;
+
+    const verifyPayment = async (retryCount = 0) => {
+      if (!orderId || !isMounted) {
+        if (isMounted) setStatus('failed');
         return;
       }
+
+      // Small initial delay to avoid race conditions with DB
+      if (retryCount === 0) {
+        await new Promise(r => setTimeout(r, 600));
+      }
+
+      if (!isMounted) return;
 
       // Basic UUID format check
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,7 +43,7 @@ export default function PaymentResult() {
 
       if (!uuidRegex.test(orderId) && !isMembershipId) {
         console.error('Invalid order ID format:', orderId);
-        setStatus('failed');
+        if (isMounted) setStatus('failed');
         return;
       }
 
@@ -48,10 +57,18 @@ export default function PaymentResult() {
             .single();
 
           if (orderError || !orderData) {
-            console.error('Error fetching order:', orderError);
-            setStatus('failed');
+            // Self-retry if order not found (might be DB lag)
+            if (retryCount < 2 && isMounted) {
+              console.log(`Retrying order fetch (attempt ${retryCount + 1})...`);
+              setTimeout(() => verifyPayment(retryCount + 1), 1000);
+              return;
+            }
+            console.error('Error fetching order after retries:', orderError);
+            if (isMounted) setStatus('failed');
             return;
           }
+
+          if (!isMounted) return;
 
           // Atomic-like update: Set all data before status
           const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : null;
@@ -70,7 +87,7 @@ export default function PaymentResult() {
             clearCart(safeCanteenId);
           }
 
-          setStatus('success');
+          if (isMounted) setStatus('success');
           toast.success('Order placed successfully with wallet!');
           return;
         }
@@ -80,19 +97,21 @@ export default function PaymentResult() {
           body: { orderId },
         });
 
+        if (!isMounted) return;
+
         if (error) {
           console.error('Verification error:', error);
-          setStatus('failed');
+          if (isMounted) setStatus('failed');
           toast.error('Payment verification failed');
           return;
         }
 
         if (data.success) {
           if (isMembershipId) {
-            setStatus('success');
+            if (isMounted) setStatus('success');
             toast.success('Membership activated successfully!');
             setTimeout(() => {
-              navigate('/student/dashboard');
+              if (isMounted) navigate('/student/dashboard');
             }, 3000);
             return;
           }
@@ -106,10 +125,16 @@ export default function PaymentResult() {
             .single();
 
           if (orderError || !orderData) {
+            if (retryCount < 2 && isMounted) {
+              setTimeout(() => verifyPayment(retryCount + 1), 1500);
+              return;
+            }
             console.error('Error fetching order:', orderError);
-            setStatus('failed');
+            if (isMounted) setStatus('failed');
             return;
           }
+
+          if (!isMounted) return;
 
           const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : null;
           const safeCanteenId = orderData.canteen_id ? String(orderData.canteen_id) : null;
@@ -127,20 +152,23 @@ export default function PaymentResult() {
             clearCart(safeCanteenId);
           }
 
-          setStatus('success');
+          if (isMounted) setStatus('success');
           toast.success('Payment successful!');
         } else {
-          setStatus('failed');
+          if (isMounted) setStatus('failed');
           toast.error('Payment was not completed');
         }
       } catch (error) {
         console.error('Error verifying payment:', error);
-        setStatus('failed');
-        toast.error('Failed to verify payment');
+        if (isMounted) {
+          setStatus('failed');
+          toast.error('Failed to verify payment');
+        }
       }
     };
 
     verifyPayment();
+    return () => { isMounted = false; };
   }, [orderId, clearCart, navigate, isWalletPayment]);
 
   const handleViewOrders = () => {
@@ -149,7 +177,7 @@ export default function PaymentResult() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-mcd-cream flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-foreground">Verifying payment...</h2>
@@ -161,24 +189,13 @@ export default function PaymentResult() {
 
   if (status === 'failed') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-mcd-cream flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-sm p-8 max-w-md w-full text-center">
           <XCircle className="h-16 w-16 text-destructive mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-foreground mb-2">Payment Failed</h2>
-          <p className="text-muted-foreground mb-6">
-            Your payment could not be completed. Please try again.
+          <p className="text-muted-foreground mb-8">
+            There was an issue processing your payment. If any amount was deducted, it will be refunded.
           </p>
-          <div className="space-y-3">
-            <Button asChild variant="default" className="w-full">
-              <Link to="/student/carts">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Cart
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/student/dashboard">Browse Canteens</Link>
-            </Button>
-          </div>
         </div>
       </div>
     );

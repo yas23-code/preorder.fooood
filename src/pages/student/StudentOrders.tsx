@@ -102,10 +102,10 @@ export default function StudentOrders() {
   const { toast } = useToast();
 
   // Location-aware - strictly enforce visibility based on location
-  const { isInsideCampus, isLoading: isLocationLoading } = useCollegeLocation();
+  const { isInsideCampus, isLoading: isLocationLoading, showNearbyShops } = useCollegeLocation();
 
   // Determine the active tab strictly based on location (no user toggle allowed)
-  const activeTab: OrderTab = isInsideCampus === false ? 'shop' : 'canteen';
+  const activeTab: OrderTab = (!showNearbyShops || isInsideCampus === true || isInsideCampus === null) ? 'canteen' : 'shop';
 
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('all');
