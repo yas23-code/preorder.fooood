@@ -30,7 +30,7 @@ export default function PaymentResult() {
 
       // Basic UUID format check
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isMembershipId = orderId.includes('_mem_');
+      const isMembershipId = String(orderId).includes('_mem_');
 
       if (!uuidRegex.test(orderId) && !isMembershipId) {
         console.error('Invalid order ID format:', orderId);
@@ -53,17 +53,24 @@ export default function PaymentResult() {
             return;
           }
 
-          setQrToken(orderData.qr_token);
-          setCanteenId(orderData.canteen_id);
-          setEstimatedReadyTime(orderData.estimated_ready_time);
-          setOrderStatus(orderData.status);
-          setOrderNo(orderData.order_no);
-          setStatus('success');
+          // Atomic-like update: Set all data before status
+          const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : null;
+          const safeCanteenId = orderData.canteen_id ? String(orderData.canteen_id) : null;
+          const safeEstimatedReadyTime = orderData.estimated_ready_time ? String(orderData.estimated_ready_time) : null;
+          const safeOrderStatus = orderData.status ? String(orderData.status) : null;
+          const safeOrderNo = orderData.order_no !== null ? Number(orderData.order_no) : null;
 
-          if (orderData.canteen_id) {
-            clearCart(orderData.canteen_id);
+          setQrToken(safeQrToken);
+          setCanteenId(safeCanteenId);
+          setEstimatedReadyTime(safeEstimatedReadyTime);
+          setOrderStatus(safeOrderStatus);
+          setOrderNo(safeOrderNo);
+
+          if (safeCanteenId) {
+            clearCart(safeCanteenId);
           }
 
+          setStatus('success');
           toast.success('Order placed successfully with wallet!');
           return;
         }
@@ -85,7 +92,7 @@ export default function PaymentResult() {
             setStatus('success');
             toast.success('Membership activated successfully!');
             setTimeout(() => {
-              navigate('/student/dashboard'); // Or direct them back to membership page 
+              navigate('/student/dashboard');
             }, 3000);
             return;
           }
@@ -104,18 +111,23 @@ export default function PaymentResult() {
             return;
           }
 
-          setQrToken(orderData.qr_token);
-          setCanteenId(orderData.canteen_id);
-          setEstimatedReadyTime(orderData.estimated_ready_time);
-          setOrderStatus(orderData.status);
-          setOrderNo(orderData.order_no);
-          setStatus('success');
+          const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : null;
+          const safeCanteenId = orderData.canteen_id ? String(orderData.canteen_id) : null;
+          const safeEstimatedReadyTime = orderData.estimated_ready_time ? String(orderData.estimated_ready_time) : null;
+          const safeOrderStatus = orderData.status ? String(orderData.status) : null;
+          const safeOrderNo = orderData.order_no !== null ? Number(orderData.order_no) : null;
 
-          // Clear the cart for this canteen
-          if (orderData.canteen_id) {
-            clearCart(orderData.canteen_id);
+          setQrToken(safeQrToken);
+          setCanteenId(safeCanteenId);
+          setEstimatedReadyTime(safeEstimatedReadyTime);
+          setOrderStatus(safeOrderStatus);
+          setOrderNo(safeOrderNo);
+
+          if (safeCanteenId) {
+            clearCart(safeCanteenId);
           }
 
+          setStatus('success');
           toast.success('Payment successful!');
         } else {
           setStatus('failed');
@@ -218,7 +230,8 @@ export default function PaymentResult() {
                 <p className="text-lg font-bold text-amber-800">
                   {(() => {
                     try {
-                      const safeDateStr = estimatedReadyTime.replace(' ', 'T');
+                      if (!estimatedReadyTime) return 'Any moment';
+                      const safeDateStr = String(estimatedReadyTime).replace(' ', 'T');
                       const date = new Date(safeDateStr);
                       if (isNaN(date.getTime())) return 'Any moment';
                       return date.toLocaleTimeString('en-IN', {
@@ -238,7 +251,8 @@ export default function PaymentResult() {
                 <p className="text-lg font-bold text-amber-800">
                   {(() => {
                     try {
-                      const safeDateStr = estimatedReadyTime.replace(' ', 'T');
+                      if (!estimatedReadyTime) return 'Any moment';
+                      const safeDateStr = String(estimatedReadyTime).replace(' ', 'T');
                       const date = new Date(safeDateStr);
                       if (isNaN(date.getTime())) return 'Any moment';
                       const waitMins = Math.max(0, Math.round((date.getTime() - Date.now()) / 60000));
