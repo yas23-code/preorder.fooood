@@ -28,6 +28,16 @@ export default function PaymentResult() {
         return;
       }
 
+      // Basic UUID format check
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isMembershipId = orderId.includes('_mem_');
+
+      if (!uuidRegex.test(orderId) && !isMembershipId) {
+        console.error('Invalid order ID format:', orderId);
+        setStatus('failed');
+        return;
+      }
+
       try {
         if (isWalletPayment) {
           // Wallet payment: order is already marked as paid by the RPC, just fetch details
@@ -37,7 +47,7 @@ export default function PaymentResult() {
             .eq('id', orderId)
             .single();
 
-          if (orderError) {
+          if (orderError || !orderData) {
             console.error('Error fetching order:', orderError);
             setStatus('failed');
             return;
@@ -71,7 +81,7 @@ export default function PaymentResult() {
         }
 
         if (data.success) {
-          if (orderId.includes('_mem_')) {
+          if (isMembershipId) {
             setStatus('success');
             toast.success('Membership activated successfully!');
             setTimeout(() => {
@@ -88,7 +98,7 @@ export default function PaymentResult() {
             .eq('id', orderId)
             .single();
 
-          if (orderError) {
+          if (orderError || !orderData) {
             console.error('Error fetching order:', orderError);
             setStatus('failed');
             return;
@@ -119,7 +129,7 @@ export default function PaymentResult() {
     };
 
     verifyPayment();
-  }, [orderId, clearCart, navigate]);
+  }, [orderId, clearCart, navigate, isWalletPayment]);
 
   const handleViewOrders = () => {
     navigate('/student/orders');
@@ -206,20 +216,36 @@ export default function PaymentResult() {
               <div>
                 <p className="text-xs text-amber-700 font-medium">Estimated Ready Time</p>
                 <p className="text-lg font-bold text-amber-800">
-                  {new Date(estimatedReadyTime).toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                    timeZone: 'Asia/Kolkata'
-                  })}
+                  {(() => {
+                    try {
+                      const safeDateStr = estimatedReadyTime.replace(' ', 'T');
+                      const date = new Date(safeDateStr);
+                      if (isNaN(date.getTime())) return 'Any moment';
+                      return date.toLocaleTimeString('en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZone: 'Asia/Kolkata'
+                      });
+                    } catch (e) {
+                      return 'Any moment';
+                    }
+                  })()}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-amber-700 font-medium">Approx Wait</p>
                 <p className="text-lg font-bold text-amber-800">
                   {(() => {
-                    const waitMins = Math.max(0, Math.round((new Date(estimatedReadyTime).getTime() - Date.now()) / 60000));
-                    return waitMins > 0 ? `~${waitMins} min` : 'Any moment';
+                    try {
+                      const safeDateStr = estimatedReadyTime.replace(' ', 'T');
+                      const date = new Date(safeDateStr);
+                      if (isNaN(date.getTime())) return 'Any moment';
+                      const waitMins = Math.max(0, Math.round((date.getTime() - Date.now()) / 60000));
+                      return waitMins > 0 ? `~${waitMins} min` : 'Any moment';
+                    } catch (e) {
+                      return 'Any moment';
+                    }
                   })()}
                 </p>
               </div>

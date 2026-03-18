@@ -97,16 +97,16 @@ export default function StudentOrders() {
   const [isShopLoading, setIsShopLoading] = useState(true);
   const [isClearing, setIsClearing] = useState(false);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
-  
+
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   // Location-aware - strictly enforce visibility based on location
   const { isInsideCampus, isLoading: isLocationLoading } = useCollegeLocation();
-  
+
   // Determine the active tab strictly based on location (no user toggle allowed)
   const activeTab: OrderTab = isInsideCampus === false ? 'shop' : 'canteen';
-  
+
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [canteenFilter, setCanteenFilter] = useState<string>('all');
@@ -131,13 +131,13 @@ export default function StudentOrders() {
 
       if (oldOrders && oldOrders.length > 0) {
         const oldOrderIds = oldOrders.map(o => o.id);
-        
+
         // Delete order items first
         await supabase
           .from('order_items')
           .delete()
           .in('order_id', oldOrderIds);
-        
+
         // Then delete old orders
         await supabase
           .from('orders')
@@ -156,7 +156,7 @@ export default function StudentOrders() {
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('Error fetching orders:', error);
       } else {
@@ -196,9 +196,9 @@ export default function StudentOrders() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setOrders(prev => 
-            prev.map(order => 
-              order.id === payload.new.id 
+          setOrders(prev =>
+            prev.map(order =>
+              order.id === payload.new.id
                 ? { ...order, status: payload.new.status as Order['status'] }
                 : order
             )
@@ -293,12 +293,12 @@ export default function StudentOrders() {
       if (statusFilter !== 'all' && order.status !== statusFilter) {
         return false;
       }
-      
+
       // Canteen filter
       if (canteenFilter !== 'all' && order.canteen_id !== canteenFilter) {
         return false;
       }
-      
+
       // Date filter
       if (dateFilter) {
         const orderDate = format(new Date(order.created_at), 'yyyy-MM-dd');
@@ -306,7 +306,7 @@ export default function StudentOrders() {
           return false;
         }
       }
-      
+
       return true;
     });
   }, [orders, statusFilter, canteenFilter, dateFilter]);
@@ -318,12 +318,12 @@ export default function StudentOrders() {
       if (statusFilter !== 'all' && order.status !== statusFilter) {
         return false;
       }
-      
+
       // Shop filter
       if (shopFilter !== 'all' && order.shop?.shop_name !== shopFilter) {
         return false;
       }
-      
+
       // Date filter
       if (dateFilter) {
         const orderDate = format(new Date(order.created_at), 'yyyy-MM-dd');
@@ -331,7 +331,7 @@ export default function StudentOrders() {
           return false;
         }
       }
-      
+
       return true;
     });
   }, [shopOrders, statusFilter, shopFilter, dateFilter]);
@@ -345,27 +345,27 @@ export default function StudentOrders() {
 
   const clearOrderHistory = async () => {
     if (!user || orders.length === 0) return;
-    
+
     setIsClearing(true);
     try {
       // Delete all order items first (due to foreign key constraint)
       const orderIds = orders.map(o => o.id);
-      
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .delete()
         .in('order_id', orderIds);
-      
+
       if (itemsError) throw itemsError;
-      
+
       // Then delete all orders
       const { error: ordersError } = await supabase
         .from('orders')
         .delete()
         .eq('user_id', user.id);
-      
+
       if (ordersError) throw ordersError;
-      
+
       setOrders([]);
       toast({
         title: 'History cleared',
@@ -391,17 +391,17 @@ export default function StudentOrders() {
         .from('order_items')
         .delete()
         .eq('order_id', orderId);
-      
+
       if (itemsError) throw itemsError;
-      
+
       // Then delete the order
       const { error: orderError } = await supabase
         .from('orders')
         .delete()
         .eq('id', orderId);
-      
+
       if (orderError) throw orderError;
-      
+
       setOrders(prev => prev.filter(o => o.id !== orderId));
       toast({
         title: 'Order deleted',
@@ -428,7 +428,7 @@ export default function StudentOrders() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-mcd-cream border-b border-mcd-border shadow-card">
         <div className="container mx-auto px-4 h-[72px] md:h-24 flex items-center">
-          <Link 
+          <Link
             to="/student/dashboard"
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-mcd-red transition-colors font-medium"
           >
@@ -439,7 +439,7 @@ export default function StudentOrders() {
           <div className="w-10 md:w-32" />
         </div>
       </header>
-      
+
       <main className="container mx-auto px-4 py-4 md:py-6 max-w-4xl">
 
         {/* Location-based header - shows which order type is visible */}
@@ -471,7 +471,7 @@ export default function StudentOrders() {
           <p className="text-sm text-muted-foreground mb-4">
             Filter orders by status, {activeTab === 'canteen' ? 'canteen' : 'shop'}, or date
           </p>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             {/* Status Filter */}
             <div>
@@ -492,7 +492,7 @@ export default function StudentOrders() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Canteen/Shop Filter */}
             {activeTab === 'canteen' ? (
               <div>
@@ -533,7 +533,7 @@ export default function StudentOrders() {
                 </Select>
               </div>
             )}
-            
+
             {/* Date Filter */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -547,12 +547,12 @@ export default function StudentOrders() {
               />
             </div>
           </div>
-          
+
           <div className="flex justify-between gap-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                   disabled={(activeTab === 'canteen' ? orders.length === 0 : shopOrders.length === 0) || isClearing}
                 >
@@ -578,8 +578,8 @@ export default function StudentOrders() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={resetFilters}
               className="border-mcd-red text-mcd-red hover:bg-mcd-red hover:text-white"
             >
@@ -604,58 +604,58 @@ export default function StudentOrders() {
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     {/* Header with canteen name, status, order no, and delete button */}
-                     <div className="flex items-start justify-between mb-3">
-                       <div className="flex flex-wrap items-center gap-3">
-                         <h3 className="text-xl font-bold text-foreground">
-                           {order.canteen?.name || 'Unknown Canteen'}
-                         </h3>
-                         <Badge className={statusConfig[order.status]?.className || statusConfig.pending.className}>
-                           {statusConfig[order.status]?.label || order.status}
-                         </Badge>
-                       </div>
-                       <div className="flex items-center gap-2">
-                       {order.order_no && (
-                           <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                             <span className="text-xs font-medium">ORDER</span>
-                             <span className="text-lg font-bold">#{order.order_no}</span>
-                           </div>
-                         )}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            disabled={deletingOrderId === order.id}
-                          >
-                            {deletingOrderId === order.id ? (
-                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            ) : (
-                              <X className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete this order?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently remove this order from your history. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteOrder(order.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="text-xl font-bold text-foreground">
+                          {order.canteen?.name || 'Unknown Canteen'}
+                        </h3>
+                        <Badge className={statusConfig[order.status]?.className || statusConfig.pending.className}>
+                          {statusConfig[order.status]?.label || order.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {order.order_no && (
+                          <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                            <span className="text-xs font-medium">ORDER</span>
+                            <span className="text-lg font-bold">#{order.order_no}</span>
+                          </div>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              disabled={deletingOrderId === order.id}
                             >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                       </div>
-                     </div>
-                    
+                              {deletingOrderId === order.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete this order?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently remove this order from your history. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteOrder(order.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+
                     {/* Location */}
                     {order.canteen?.location && (
                       <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -663,16 +663,17 @@ export default function StudentOrders() {
                         <span className="text-sm">{order.canteen.location}</span>
                       </div>
                     )}
-                    
+
                     {/* Date */}
                     <div className="flex items-center gap-2 text-muted-foreground mb-2">
                       <Clock className="h-4 w-4" />
                       <span className="text-sm">{formatOrderDate(order.created_at)}</span>
                     </div>
-                    
+
                     {/* ETA Display - Only after vendor accepts order */}
                     {order.status === 'accepted' && order.estimated_ready_time && order.payment_status === 'paid' && (() => {
-                      const minutesLeft = Math.ceil((new Date(order.estimated_ready_time).getTime() - Date.now()) / 60000);
+                      const safeDateStr = order.estimated_ready_time.replace(' ', 'T');
+                      const minutesLeft = Math.ceil((new Date(safeDateStr).getTime() - Date.now()) / 60000);
                       const isOverdue = minutesLeft <= 0;
                       return isOverdue ? (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
@@ -694,7 +695,7 @@ export default function StudentOrders() {
                         </div>
                       );
                     })()}
-                    
+
                     {/* Items and Total */}
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
                       <div>
@@ -707,14 +708,14 @@ export default function StudentOrders() {
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="text-right">
                         <p className="text-2xl md:text-3xl font-bold text-mcd-red">
                           ₹{Number(order.total).toFixed(2)}
                         </p>
                       </div>
                     </div>
-                    
+
                     {/* Pickup Code Display - Only for paid orders */}
                     {order.payment_status === 'paid' && order.pickup_code && order.status !== 'completed' && order.status !== 'rejected' && (
                       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
@@ -792,7 +793,7 @@ export default function StudentOrders() {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Address */}
                     {order.shop?.address && (
                       <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -800,16 +801,17 @@ export default function StudentOrders() {
                         <span className="text-sm">{order.shop.address}</span>
                       </div>
                     )}
-                    
+
                     {/* Date */}
                     <div className="flex items-center gap-2 text-muted-foreground mb-2">
                       <Clock className="h-4 w-4" />
                       <span className="text-sm">{formatOrderDate(order.created_at)}</span>
                     </div>
-                    
+
                     {/* ETA Display - Only after vendor accepts order */}
                     {order.status === 'accepted' && order.estimated_ready_time && order.payment_status === 'paid' && (() => {
-                      const minutesLeft = Math.ceil((new Date(order.estimated_ready_time).getTime() - Date.now()) / 60000);
+                      const safeDateStr = order.estimated_ready_time.replace(' ', 'T');
+                      const minutesLeft = Math.ceil((new Date(safeDateStr).getTime() - Date.now()) / 60000);
                       const isOverdue = minutesLeft <= 0;
                       return isOverdue ? (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
@@ -831,7 +833,7 @@ export default function StudentOrders() {
                         </div>
                       );
                     })()}
-                    
+
                     {/* Items and Total */}
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
                       <div>
@@ -844,14 +846,14 @@ export default function StudentOrders() {
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="text-right">
                         <p className="text-2xl md:text-3xl font-bold text-mcd-red">
                           ₹{Number(order.total).toFixed(2)}
                         </p>
                       </div>
                     </div>
-                    
+
                     {/* Pickup Code Display - Only for paid orders */}
                     {order.payment_status === 'paid' && order.pickup_code && order.status !== 'completed' && order.status !== 'cancelled' && (
                       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
