@@ -15,6 +15,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw-push.js',
       manifestFilename: "manifest.json",
       includeAssets: [
         "favicon.ico",
@@ -127,6 +130,7 @@ export default defineConfig(({ mode }) => ({
       },
       devOptions: {
         enabled: true,
+        type: 'module'
       },
     }),
   ].filter(Boolean),

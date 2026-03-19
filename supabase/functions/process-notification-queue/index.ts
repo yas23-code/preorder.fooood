@@ -42,13 +42,37 @@ Deno.serve(async (req) => {
     for (const notification of notifications) {
       try {
         console.log(`Processing notification ${notification.id} for user: ${notification.user_id}`)
-        
+
         // Extract notification details
         const pickupCode = notification.message?.match(/Pickup code: (\w+)/)?.[1] || ''
         const canteenName = notification.message?.match(/from (.+?) is ready/)?.[1] || 'the canteen'
 
         let telegramSent = false
         let emailSent = false
+        let webPushSent = false
+
+        // Send Web Push notification
+        try {
+          const webPushResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-web-push`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+            },
+            body: JSON.stringify({
+              user_id: notification.user_id,
+              order_id: notification.order_id,
+              title: notification.title || 'preorder.food',
+              body: notification.message,
+              url: `/student/orders`
+            })
+          })
+          const webPushResult = await webPushResponse.json()
+          console.log('Web push notification result:', webPushResult)
+          webPushSent = webPushResponse.ok && webPushResult.success
+        } catch (webPushError) {
+          console.log('Web push notification failed:', webPushError)
+        }
 
         // Send Telegram notification
         try {
@@ -102,22 +126,23 @@ Deno.serve(async (req) => {
 
         results.push({
           id: notification.id,
-          success: telegramSent || emailSent,
+          success: telegramSent || emailSent || webPushSent,
           telegramSent,
           emailSent,
+          webPushSent
         })
-        
-        console.log(`Notification ${notification.id} processed - Telegram: ${telegramSent}, Email: ${emailSent}`)
+
+        console.log(`Notification ${notification.id} processed - Telegram: ${telegramSent}, Email: ${emailSent}, WebPush: ${webPushSent}`)
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         console.error(`Failed to process notification ${notification.id}:`, errorMessage)
-        
+
         // Still mark as processed to prevent infinite retries
         await supabase
           .from('notification_queue')
           .update({ processed: true })
           .eq('id', notification.id)
-          
+
         results.push({
           id: notification.id,
           success: false,

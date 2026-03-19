@@ -31,6 +31,7 @@ import { useActiveShopOrderTimer } from '@/hooks/useActiveShopOrderTimer';
 import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 import { useOrderRejectionNotifications } from '@/hooks/useOrderRejectionNotifications';
 import { useShopOrderOverdueNotification } from '@/hooks/useShopOrderOverdueNotification';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Store, Bell, Clock, LogOut, Building2, MapPin, MapPinOff, Wallet as WalletIcon } from 'lucide-react';
 import preorderLogo from '@/assets/preorder-logo.jpg';
 
@@ -115,6 +116,41 @@ export default function StudentDashboard() {
       setActiveCanteenName('');
     }
   }, [activeOrder?.canteenId]);
+
+  const { permission, requestPermission } = usePushNotifications(user?.id);
+
+  // Check if user is banned on mount
+  useEffect(() => {
+    const checkBanStatus = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('bans')
+        .select('*')
+        .eq('target_id', user.id)
+        .eq('is_active', true)
+        .single();
+
+      if (data) {
+        toast.error("Your account has been restricted. Please contact support.");
+        logout();
+        navigate('/');
+      }
+    };
+    checkBanStatus();
+  }, [user]);
+
+  // Request notification permissions
+  useEffect(() => {
+    if (permission === 'default' && user) {
+      toast("Get updates on your order", {
+        description: "Enable browser notifications to know exactly when your food is ready.",
+        action: {
+          label: "Enable",
+          onClick: () => requestPermission()
+        },
+      });
+    }
+  }, [permission, user]);
 
   // Show toast if navigated from successful payment
   useEffect(() => {
