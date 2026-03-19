@@ -1,5 +1,6 @@
 import { useMembership } from '@/hooks/useMembership';
 import { Crown, Check, ShoppingBag, Sparkles, Clock } from 'lucide-react';
+import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 
 interface MembershipBannerProps {
     subtotal: number;
@@ -29,8 +30,9 @@ function isTooEarly(startTime: string): boolean {
 
 export function MembershipBanner({ subtotal, membershipDiscount, startTime }: MembershipBannerProps) {
     const { isActive, isMembershipActive, isEligibleForDiscount, isLoading } = useMembership();
+    const { enableCampusMembership } = useCollegeLocation();
 
-    if (isLoading || !isActive) return null;
+    if (isLoading || !isActive || !enableCampusMembership) return null;
 
     const meetsMinimumOrder = subtotal >= 70;
     const tooEarly = !!startTime && isTooEarly(startTime);

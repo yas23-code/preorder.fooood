@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, User, Menu, X, LogOut, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Logo } from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useShopCart } from '@/context/ShopCartContext';
 import { DevLocationToggle } from './DevLocationToggle';
+import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +26,7 @@ export function Header({ variant = 'default' }: HeaderProps) {
   const { user, profile, logout } = useAuth();
   const { getTotalItemCount } = useCart();
   const { getTotalItemCount: getShopTotalItemCount } = useShopCart();
+  const { enableCampusMembership } = useCollegeLocation();
   const navigate = useNavigate();
   const location = useLocation();
   const itemCount = getTotalItemCount();
@@ -110,11 +113,22 @@ export function Header({ variant = 'default' }: HeaderProps) {
             )}
 
             {variant === 'landing' && (
-              <Link to="/student/membership">
-                <Button variant="ghost" size="icon" className="relative bg-mcd-selected hover:bg-mcd-yellow/30 h-11 w-11 md:h-10 md:w-10 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
+              enableCampusMembership ? (
+                <Link to="/student/membership">
+                  <Button variant="ghost" size="icon" className="relative bg-mcd-selected hover:bg-mcd-yellow/30 h-11 w-11 md:h-10 md:w-10 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
+                    <Crown className="h-6 w-6 md:h-5 md:w-5 text-amber-500" strokeWidth={2.25} />
+                  </Button>
+                </Link>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => toast.info("This feature will be functional soon")}
+                  className="relative bg-mcd-selected hover:bg-mcd-yellow/30 h-11 w-11 md:h-10 md:w-10 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 opacity-70"
+                >
                   <Crown className="h-6 w-6 md:h-5 md:w-5 text-amber-500" strokeWidth={2.25} />
                 </Button>
-              </Link>
+              )
             )}
 
             {user && profile?.role === 'student' && (
@@ -240,14 +254,27 @@ export function Header({ variant = 'default' }: HeaderProps) {
                 </>
               )}
               {variant === 'landing' && (
-                <Link
-                  to="/student/membership"
-                  className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium flex items-center gap-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Crown className="h-4 w-4 text-amber-500" />
-                  Campus Membership
-                </Link>
+                enableCampusMembership ? (
+                  <Link
+                    to="/student/membership"
+                    className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium flex items-center gap-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    Campus Membership
+                  </Link>
+                ) : (
+                  <button
+                    className="px-4 py-2 text-mcd-text hover:bg-mcd-selected rounded-lg transition-colors font-medium flex items-center gap-2 w-full text-left opacity-70"
+                    onClick={() => {
+                      toast.info("This feature will be functional soon");
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    Campus Membership
+                  </button>
+                )
               )}
             </nav>
           </div>
