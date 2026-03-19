@@ -47,7 +47,7 @@ export function Header({ variant = 'default' }: HeaderProps) {
       }`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-[72px] md:h-24">
-          <Logo size="sm" />
+          <Logo size="xs" showExtension={false} />
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6">
