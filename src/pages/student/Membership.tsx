@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMembership } from '@/hooks/useMembership';
 import { Button } from '@/components/ui/button';
-import { Crown, ArrowLeft, Sparkles, Zap, Shield, Clock, Check, ShoppingBag, Loader2, Star } from 'lucide-react';
+import { Crown, ArrowLeft, Sparkles, Zap, Shield, Clock, Check, ShoppingBag, Loader2, Star, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 
 export default function Membership() {
     const {
@@ -15,6 +16,7 @@ export default function Membership() {
         isLoading,
         purchaseMembership,
     } = useMembership();
+    const { enableCampusMembership } = useCollegeLocation();
     const [isPurchasing, setIsPurchasing] = useState(false);
 
     const handlePurchase = async () => {
@@ -111,143 +113,161 @@ export default function Membership() {
                         <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
                     </div>
                 ) : (
-                    <>
-                        {/* Status Card */}
-                        {isActive && (
-                            <div className={`relative overflow-hidden rounded-2xl p-5 shadow-lg mb-6 ${isEligibleForDiscount
-                                ? 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600'
-                                : 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-700'
-                                }`}>
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-20 translate-x-20" />
-                                <div className="absolute bottom-0 left-0 w-28 h-28 bg-white/10 rounded-full translate-y-14 -translate-x-14" />
-
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="bg-white/20 p-2 rounded-xl">
-                                            <Crown className="h-6 w-6 text-white" />
-                                        </div>
-                                        <div>
-                                            <h2 className="font-bold text-white text-lg">Campus Member</h2>
-                                            <p className="text-white/70 text-xs">
-                                                Since {membership?.membership_purchase_date
-                                                    ? new Date(membership.membership_purchase_date).toLocaleDateString('en-IN', {
-                                                        day: 'numeric',
-                                                        month: 'short',
-                                                        year: 'numeric',
-                                                    })
-                                                    : 'N/A'}
-                                            </p>
-                                        </div>
+                    <div className="relative">
+                        {!enableCampusMembership && (
+                            <div className="absolute inset-0 z-20 bg-mcd-cream/60 backdrop-blur-[1.5px] flex items-start justify-center pt-24 rounded-3xl p-6">
+                                <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm border border-mcd-border animate-fade-up">
+                                    <div className="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Crown className="h-8 w-8 text-amber-600" />
                                     </div>
-
-                                    <div className="bg-white/15 rounded-xl p-3">
-                                        {isEligibleForDiscount ? (
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Check className="h-5 w-5 text-green-200" />
-                                                    <div>
-                                                        <p className="text-white font-medium text-sm">Discount Active</p>
-                                                        <p className="text-white/70 text-xs">discount on preorders ≥₹70</p>
-                                                    </div>
-                                                </div>
-                                                <div className="bg-white/20 px-3 py-1.5 rounded-lg">
-                                                    <div className="flex items-center gap-1 text-white text-sm font-bold">
-                                                        <Clock className="h-3.5 w-3.5" />
-                                                        <span>{daysRemaining}d</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2">
-                                                <ShoppingBag className="h-5 w-5 text-white/80" />
-                                                <div>
-                                                    <p className="text-white font-medium text-sm">Discount Inactive</p>
-                                                    <p className="text-white/70 text-xs">
-                                                        Place an order of ₹70+ to reactivate your discount
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">Coming Soon!</h3>
+                                    <p className="text-muted-foreground text-sm">
+                                        The Campus Membership program is currently being updated to bring you even better rewards.
+                                    </p>
+                                    <p className="text-mcd-red font-bold text-xs mt-4 uppercase tracking-wider">
+                                        Stay tuned for the launch
+                                    </p>
                                 </div>
                             </div>
                         )}
+                        <div className={!enableCampusMembership ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}>
+                            {/* Status Card */}
+                            {isActive && (
+                                <div className={`relative overflow-hidden rounded-2xl p-5 shadow-lg mb-6 ${isEligibleForDiscount
+                                    ? 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600'
+                                    : 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-700'
+                                    }`}>
+                                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-20 translate-x-20" />
+                                    <div className="absolute bottom-0 left-0 w-28 h-28 bg-white/10 rounded-full translate-y-14 -translate-x-14" />
 
-                        {/* Benefits List */}
-                        <div className="mb-6">
-                            <h3 className="font-bold text-foreground text-base mb-3">Membership Benefits</h3>
-                            <div className="space-y-3">
-                                {benefits.map((benefit, index) => (
-                                    <div
-                                        key={index}
-                                        className="bg-white rounded-xl border border-mcd-border p-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow"
-                                    >
-                                        <div className={`${benefit.bgColor} p-2 rounded-lg flex-shrink-0`}>
-                                            <benefit.icon className={`h-5 w-5 ${benefit.color}`} />
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="bg-white/20 p-2 rounded-xl">
+                                                <Crown className="h-6 w-6 text-white" />
+                                            </div>
+                                            <div>
+                                                <h2 className="font-bold text-white text-lg">Campus Member</h2>
+                                                <p className="text-white/70 text-xs">
+                                                    Since {membership?.membership_purchase_date
+                                                        ? new Date(membership.membership_purchase_date).toLocaleDateString('en-IN', {
+                                                            day: 'numeric',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                        })
+                                                        : 'N/A'}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-foreground text-sm">{benefit.title}</p>
-                                            <p className="text-muted-foreground text-xs mt-0.5">{benefit.description}</p>
+
+                                        <div className="bg-white/15 rounded-xl p-3">
+                                            {isEligibleForDiscount ? (
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <Check className="h-5 w-5 text-green-200" />
+                                                        <div>
+                                                            <p className="text-white font-medium text-sm">Discount Active</p>
+                                                            <p className="text-white/70 text-xs">discount on preorders ≥₹70</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white/20 px-3 py-1.5 rounded-lg">
+                                                        <div className="flex items-center gap-1 text-white text-sm font-bold">
+                                                            <Clock className="h-3.5 w-3.5" />
+                                                            <span>{daysRemaining}d</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <ShoppingBag className="h-5 w-5 text-white/80" />
+                                                    <div>
+                                                        <p className="text-white font-medium text-sm">Discount Inactive</p>
+                                                        <p className="text-white/70 text-xs">
+                                                            Place an order of ₹70+ to reactivate your discount
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                </div>
+                            )}
 
-                        {/* How It Works */}
-                        <div className="mb-6">
-                            <h3 className="font-bold text-foreground text-base mb-3">How It Works</h3>
-                            <div className="bg-white rounded-xl border border-mcd-border p-4 shadow-sm">
-                                <ol className="space-y-3">
-                                    <li className="flex items-start gap-3">
-                                        <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
-                                        <p className="text-sm text-muted-foreground">
-                                            <span className="font-medium text-foreground">Purchase</span> — Pay ₹29 one-time to become a campus member
-                                        </p>
-                                    </li>
-                                    <li className="flex items-start gap-3">
-                                        <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
-                                        <p className="text-sm text-muted-foreground">
-                                            <span className="font-medium text-foreground">Order</span> — Place a preorder of ₹70 or more to activate your discount
-                                        </p>
-                                    </li>
-                                    <li className="flex items-start gap-3">
-                                        <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
-                                        <p className="text-sm text-muted-foreground">
-                                            <span className="font-medium text-foreground">Save</span> — Get discount automatically on every qualifying order
-                                        </p>
-                                    </li>
-                                    <li className="flex items-start gap-3">
-                                        <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
-                                        <p className="text-sm text-muted-foreground">
-                                            <span className="font-medium text-foreground">Stay Active</span> — Order ₹70+ every 3 days to keep your discount alive
-                                        </p>
-                                    </li>
-                                </ol>
+                            {/* Benefits List */}
+                            <div className="mb-6">
+                                <h3 className="font-bold text-foreground text-base mb-3">Membership Benefits</h3>
+                                <div className="space-y-3">
+                                    {benefits.map((benefit, index) => (
+                                        <div
+                                            key={index}
+                                            className="bg-white rounded-xl border border-mcd-border p-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow"
+                                        >
+                                            <div className={`${benefit.bgColor} p-2 rounded-lg flex-shrink-0`}>
+                                                <benefit.icon className={`h-5 w-5 ${benefit.color}`} />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-foreground text-sm">{benefit.title}</p>
+                                                <p className="text-muted-foreground text-xs mt-0.5">{benefit.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Purchase Button */}
-                        {!isActive && (
-                            <Button
-                                onClick={handlePurchase}
-                                disabled={isPurchasing}
-                                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold h-12 rounded-xl text-base shadow-lg hover:shadow-xl transition-all"
-                            >
-                                {isPurchasing ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                        Activating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Crown className="mr-2 h-5 w-5" />
-                                        Get Membership — ₹29
-                                    </>
-                                )}
-                            </Button>
-                        )}
-                    </>
+                            {/* How It Works */}
+                            <div className="mb-6">
+                                <h3 className="font-bold text-foreground text-base mb-3">How It Works</h3>
+                                <div className="bg-white rounded-xl border border-mcd-border p-4 shadow-sm">
+                                    <ol className="space-y-3">
+                                        <li className="flex items-start gap-3">
+                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                                            <p className="text-sm text-muted-foreground">
+                                                <span className="font-medium text-foreground">Purchase</span> — Pay ₹29 one-time to become a campus member
+                                            </p>
+                                        </li>
+                                        <li className="flex items-start gap-3">
+                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                                            <p className="text-sm text-muted-foreground">
+                                                <span className="font-medium text-foreground">Order</span> — Place a preorder of ₹70 or more to activate your discount
+                                            </p>
+                                        </li>
+                                        <li className="flex items-start gap-3">
+                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                                            <p className="text-sm text-muted-foreground">
+                                                <span className="font-medium text-foreground">Save</span> — Get discount automatically on every qualifying order
+                                            </p>
+                                        </li>
+                                        <li className="flex items-start gap-3">
+                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
+                                            <p className="text-sm text-muted-foreground">
+                                                <span className="font-medium text-foreground">Stay Active</span> — Order ₹70+ every 3 days to keep your discount alive
+                                            </p>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            {/* Purchase Button */}
+                            {!isActive && (
+                                <Button
+                                    onClick={handlePurchase}
+                                    disabled={isPurchasing}
+                                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold h-12 rounded-xl text-base shadow-lg hover:shadow-xl transition-all"
+                                >
+                                    {isPurchasing ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            Activating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Crown className="mr-2 h-5 w-5" />
+                                            Get Membership — ₹29
+                                        </>
+                                    )}
+                                </Button>
+                            )}
+                        </div>
+                    </div>
                 )}
             </main>
         </div>
