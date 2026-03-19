@@ -157,6 +157,8 @@ export type Database = {
           longitude: number
           name: string
           show_nearby_shops: boolean
+          enable_campus_membership: boolean
+          enable_wallet: boolean
           updated_at: string
         }
         Insert: {
@@ -168,6 +170,8 @@ export type Database = {
           longitude: number
           name: string
           show_nearby_shops?: boolean
+          enable_campus_membership?: boolean
+          enable_wallet?: boolean
           updated_at?: string
         }
         Update: {
@@ -179,6 +183,8 @@ export type Database = {
           longitude?: number
           name?: string
           show_nearby_shops?: boolean
+          enable_campus_membership?: boolean
+          enable_wallet?: boolean
           updated_at?: string
         }
         Relationships: []

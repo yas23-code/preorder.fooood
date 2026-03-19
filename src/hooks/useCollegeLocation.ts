@@ -25,6 +25,8 @@ interface CollegeConfig {
   campus_radius_meters: number;
   is_active: boolean;
   show_nearby_shops: boolean;
+  enable_campus_membership: boolean;
+  enable_wallet: boolean;
 }
 
 interface UseCollegeLocationReturn {
@@ -38,6 +40,8 @@ interface UseCollegeLocationReturn {
   isTestMode: boolean;
   forceLocation: ForceLocation;
   showNearbyShops: boolean;
+  enableCampusMembership: boolean;
+  enableWallet: boolean;
 }
 
 export function useCollegeLocation(): UseCollegeLocationReturn {
@@ -182,6 +186,8 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
   // Determine if nearby shops should be shown
   // Default to true if no config exists or show_nearby_shops is not set
   const showNearbyShops = collegeConfig?.show_nearby_shops ?? true;
+  const enableCampusMembership = collegeConfig?.enable_campus_membership ?? true;
+  const enableWallet = collegeConfig?.enable_wallet ?? true;
 
   return {
     isInsideCampus,
@@ -194,5 +200,7 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
     isTestMode: TEST_MODE,
     forceLocation: testForceLocation,
     showNearbyShops,
+    enableCampusMembership,
+    enableWallet,
   };
 }

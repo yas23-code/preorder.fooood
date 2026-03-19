@@ -31,7 +31,7 @@ class MapErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
 }
 
 // Lazy load the map component to avoid SSR issues
-const CampusMapPreview = lazy(() => 
+const CampusMapPreview = lazy(() =>
   import('./CampusMapPreview').then(mod => ({ default: mod.CampusMapPreview }))
 );
 
@@ -43,6 +43,8 @@ interface CollegeConfig {
   campus_radius_meters: number;
   is_active: boolean;
   show_nearby_shops: boolean;
+  enable_campus_membership: boolean;
+  enable_wallet: boolean;
 }
 
 export function CollegeConfigManager() {
@@ -58,6 +60,8 @@ export function CollegeConfigManager() {
   const [longitude, setLongitude] = useState('');
   const [radiusMeters, setRadiusMeters] = useState('');
   const [showNearbyShops, setShowNearbyShops] = useState(true);
+  const [enableCampusMembership, setEnableCampusMembership] = useState(true);
+  const [enableWallet, setEnableWallet] = useState(true);
   const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
@@ -84,6 +88,8 @@ export function CollegeConfigManager() {
       setRadiusMeters(data.campus_radius_meters.toString());
       setIsActive(data.is_active);
       setShowNearbyShops(data.show_nearby_shops ?? true);
+      setEnableCampusMembership(data.enable_campus_membership ?? true);
+      setEnableWallet(data.enable_wallet ?? true);
     }
     setIsLoading(false);
   }
@@ -176,6 +182,8 @@ export function CollegeConfigManager() {
             campus_radius_meters: radius,
             is_active: isActive,
             show_nearby_shops: showNearbyShops,
+            enable_campus_membership: enableCampusMembership,
+            enable_wallet: enableWallet,
           })
           .eq('id', config.id);
 
@@ -191,6 +199,8 @@ export function CollegeConfigManager() {
             campus_radius_meters: radius,
             is_active: isActive,
             show_nearby_shops: showNearbyShops,
+            enable_campus_membership: enableCampusMembership,
+            enable_wallet: enableWallet,
           });
 
         if (error) throw error;
@@ -343,7 +353,7 @@ export function CollegeConfigManager() {
         </div>
 
         {/* Show Nearby Shops Toggle */}
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center justify-between py-2 border-b border-mcd-border">
           <div className="space-y-0.5">
             <Label>Show Nearby Shops</Label>
             <p className="text-xs text-muted-foreground">
@@ -351,6 +361,28 @@ export function CollegeConfigManager() {
             </p>
           </div>
           <Switch checked={showNearbyShops} onCheckedChange={setShowNearbyShops} />
+        </div>
+
+        {/* Enable Campus Membership Toggle */}
+        <div className="flex items-center justify-between py-2 border-b border-mcd-border">
+          <div className="space-y-0.5">
+            <Label>Enable Campus Membership</Label>
+            <p className="text-xs text-muted-foreground">
+              When disabled, students will see a coming soon message when clicking on the campus membership icon.
+            </p>
+          </div>
+          <Switch checked={enableCampusMembership} onCheckedChange={setEnableCampusMembership} />
+        </div>
+
+        {/* Enable Wallet Toggle */}
+        <div className="flex items-center justify-between py-2 mb-4">
+          <div className="space-y-0.5">
+            <Label>Enable Wallet Feature</Label>
+            <p className="text-xs text-muted-foreground">
+              When disabled, students will see a coming soon message when clicking on the wallet icon.
+            </p>
+          </div>
+          <Switch checked={enableWallet} onCheckedChange={setEnableWallet} />
         </div>
 
         {/* Save Button */}
