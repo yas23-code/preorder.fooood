@@ -238,7 +238,7 @@ export default function StudentDashboard() {
       <header className="sticky top-0 z-50 bg-mcd-cream border-b border-mcd-border shadow-card">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-[72px] md:h-24">
-            <Logo />
+            <Logo size="sm" />
 
             <div className="flex items-center gap-1.5 md:gap-2">
               <Popover>
