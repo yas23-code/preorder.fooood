@@ -40,9 +40,9 @@ export default function Auth() {
   useEffect(() => {
     const checkVendorType = async () => {
       if (!user || !profile || profile.role !== "vendor") return;
-      
+
       setIsCheckingVendorType(true);
-      
+
       try {
         // Check if user has a shop
         const { data: shop } = await supabase
@@ -50,24 +50,24 @@ export default function Auth() {
           .select("id")
           .eq("owner_id", user.id)
           .maybeSingle();
-        
+
         if (shop) {
           navigate("/shops/manage", { replace: true });
           return;
         }
-        
+
         // Check if user has a canteen
         const { data: canteen } = await supabase
           .from("canteens")
           .select("id")
           .eq("vendor_id", user.id)
           .maybeSingle();
-        
+
         if (canteen) {
           navigate("/vendor/dashboard", { replace: true });
           return;
         }
-        
+
         // No shop or canteen - redirect to vendor register (canteen)
         navigate("/vendor/register", { replace: true });
       } catch (error) {
@@ -77,7 +77,7 @@ export default function Auth() {
         setIsCheckingVendorType(false);
       }
     };
-    
+
     checkVendorType();
   }, [user, profile, navigate]);
 
@@ -148,7 +148,7 @@ export default function Auth() {
       <div className="container mx-auto px-4 py-12 max-w-md">
         <div className="card-warm p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold font-display text-foreground mb-2">Welcome to Preorder</h1>
+            <h1 className="text-2xl font-bold font-display text-foreground mb-2">Welcome to preorder.food</h1>
             <p className="text-muted-foreground">Your campus food companion</p>
           </div>
 

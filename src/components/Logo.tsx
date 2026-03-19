@@ -22,12 +22,12 @@ export function Logo({ size = "md" }: LogoProps) {
     <Link to="/" className="flex items-center gap-2 group">
       <img
         src={preorderLogo}
-        alt="Preorder"
+        alt="preorder.food"
         className={`${sizeClasses[size]} ${sizeClasses[size].replace("h-", "w-")} rounded-full object-cover group-hover:scale-105 transition-transform`}
       />
       <span className={`${textClasses[size]} font-bold font-display`}>
-        <span className="text-foreground">Pre</span>
-        <span className="text-gradient">order</span>
+        <span className="text-foreground">preorder</span>
+        <span className="text-gradient">.food</span>
       </span>
     </Link>
   );

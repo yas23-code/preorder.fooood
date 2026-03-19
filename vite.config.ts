@@ -22,8 +22,8 @@ export default defineConfig(({ mode }) => ({
         "sitemap.xml",
       ],
       manifest: {
-        name: "Preorder - Campus Food Pre-ordering",
-        short_name: "Preorder",
+        name: "preorder.food - Campus Food Pre-ordering",
+        short_name: "preorder.food",
         description:
           "Pre-order your favourite food from your campus canteen. Skip the queue, save time.",
         theme_color: "#f97316",

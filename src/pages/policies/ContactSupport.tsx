@@ -54,7 +54,7 @@ export default function ContactSupport() {
                 Get instant support through WhatsApp. Our team is available to assist you.
               </p>
               <a
-                href="https://wa.me/917065909150?text=Hello%20Preorder%20Support,%20I%20need%20help"
+                href="https://wa.me/917065909150?text=Hello%20preorder.food%20Support,%20I%20need%20help"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center w-full h-10 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-colors"
@@ -110,7 +110,7 @@ export default function ContactSupport() {
           <h3 className="text-lg font-semibold text-foreground mb-4">Common Issues We Can Help With</h3>
           <div className="grid sm:grid-cols-2 gap-3">
             {helpTopics.map((topic, index) => (
-              <div 
+              <div
                 key={index}
                 className="flex items-center gap-3 p-3 rounded-xl bg-mcd-cream/30 hover:bg-mcd-cream/50 transition-colors"
               >

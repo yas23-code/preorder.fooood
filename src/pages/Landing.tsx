@@ -131,11 +131,11 @@ export default function Landing() {
 
               {/* Customer Support Button */}
               <a
-                href="https://wa.me/917065909150?text=Hello%20Preorder%20Support,%20I%20need%20help"
+                href="https://wa.me/917065909150?text=Hello%20preorder.food%20Support,%20I%20need%20help"
                 onClick={(e) => {
                   e.preventDefault();
                   const targetWindow = window.top || window;
-                  targetWindow.open("https://wa.me/917065909150?text=Hello%20Preorder%20Support,%20I%20need%20help", '_blank', 'noopener,noreferrer');
+                  targetWindow.open("https://wa.me/917065909150?text=Hello%20preorder.food%20Support,%20I%20need%20help", '_blank', 'noopener,noreferrer');
                 }}
                 target="_blank"
                 rel="noopener noreferrer"

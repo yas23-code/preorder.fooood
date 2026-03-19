@@ -108,7 +108,7 @@ export function PWAInstallPrompt() {
                         >
                             <img
                                 src="/preorder_logo.jpg"
-                                alt="Preorder"
+                                alt="preorder.food"
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
                         </div>
@@ -121,7 +121,7 @@ export function PWAInstallPrompt() {
                                     margin: 0,
                                 }}
                             >
-                                Install Preorder App
+                                Install preorder.food App
                             </p>
                             <p
                                 style={{
@@ -215,7 +215,7 @@ export function PWAInstallPrompt() {
                         >
                             <img
                                 src="/preorder_logo.jpg"
-                                alt="Preorder"
+                                alt="preorder.food"
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
                         </div>
@@ -228,7 +228,7 @@ export function PWAInstallPrompt() {
                                     margin: 0,
                                 }}
                             >
-                                Install Preorder on iOS
+                                Install preorder.food on iOS
                             </p>
                             <p
                                 style={{
