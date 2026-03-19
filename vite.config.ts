@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      manifestFilename: "manifest.json",
       includeAssets: [
         "favicon.ico",
         "preorder_logo.jpg",
@@ -37,13 +38,25 @@ export default defineConfig(({ mode }) => ({
             src: "preorder_logo.jpg",
             sizes: "192x192",
             type: "image/jpeg",
-            purpose: "any maskable",
+            purpose: "any",
+          },
+          {
+            src: "preorder_logo.jpg",
+            sizes: "192x192",
+            type: "image/jpeg",
+            purpose: "maskable",
           },
           {
             src: "preorder_logo.jpg",
             sizes: "512x512",
             type: "image/jpeg",
-            purpose: "any maskable",
+            purpose: "any",
+          },
+          {
+            src: "preorder_logo.jpg",
+            sizes: "512x512",
+            type: "image/jpeg",
+            purpose: "maskable",
           },
         ],
         categories: ["food", "lifestyle", "utilities"],

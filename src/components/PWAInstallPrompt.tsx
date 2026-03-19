@@ -7,15 +7,16 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const isIOS = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
     return (
-        /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) &&
-        !(window as unknown as { MSStream?: unknown }).MSStream
+        /iphone|ipad|ipod/.test(userAgent) ||
+        (userAgent.includes("mac") && "ontouchend" in document)
     );
 };
 
 const isInStandaloneMode = () =>
-    "standalone" in window.navigator &&
-    (window.navigator as unknown as { standalone: boolean }).standalone;
+    (window.navigator as any).standalone ||
+    window.matchMedia('(display-mode: standalone)').matches;
 
 export function PWAInstallPrompt() {
     const [deferredPrompt, setDeferredPrompt] =
