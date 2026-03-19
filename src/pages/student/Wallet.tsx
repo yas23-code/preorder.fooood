@@ -201,11 +201,11 @@ export default function Wallet() {
                             </div>
                         </div>
                     )}
-                    <h2 className={`text-lg font-bold flex items-center gap-2 ${!enableWallet ? 'opacity-50' : ''}`}>
+                    <h2 className={`text-lg font-bold flex items-center gap-2 ${!enableWallet ? 'opacity-70' : ''}`}>
                         <Plus className="h-5 w-5 text-mcd-red" />
                         Add Money
                     </h2>
-                    <div className={`grid grid-cols-2 gap-3 ${!enableWallet ? 'opacity-50' : ''}`}>
+                    <div className={`grid grid-cols-2 gap-3 ${!enableWallet ? 'opacity-70' : ''}`}>
                         {TOP_UP_AMOUNTS.map((amount) => {
                             const bonusText = getBonusText(amount);
                             return (
@@ -227,7 +227,7 @@ export default function Wallet() {
                         })}
                     </div>
 
-                    <div className={`flex gap-2 ${!enableWallet ? 'opacity-50' : ''}`}>
+                    <div className={`flex gap-2 ${!enableWallet ? 'opacity-70' : ''}`}>
                         <div className="relative flex-1">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                             <input
@@ -249,7 +249,7 @@ export default function Wallet() {
                         </Button>
                     </div>
 
-                    <div className={`bg-mcd-yellow/10 border border-mcd-yellow/30 p-4 rounded-xl flex items-start gap-3 ${!enableWallet ? 'opacity-50' : ''}`}>
+                    <div className={`bg-mcd-yellow/10 border border-mcd-yellow/30 p-4 rounded-xl flex items-start gap-3 ${!enableWallet ? 'opacity-70' : ''}`}>
                         <TrendingUp className="h-5 w-5 text-mcd-yellow mt-0.5" />
                         <div className="text-xs space-y-1">
                             <p className="font-bold text-mcd-yellow-700">Wallet Benefits</p>
