@@ -15,6 +15,7 @@ import { ShoppingCart, ArrowLeft, Loader2, CreditCard, Tag, X, Check, AlertTrian
 import { toast } from 'sonner';
 import { MembershipBanner } from '@/components/MembershipBanner';
 import { useMembership } from '@/hooks/useMembership';
+import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 
 // Get default prep time based on category
 const getDefaultPrepTime = (category?: string): number => {
@@ -81,6 +82,7 @@ export default function Cart() {
   const { isEligibleForDiscount } = useMembership();
   const [paymentMethod, setPaymentMethod] = useState<'cashfree' | 'wallet'>('cashfree');
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const { enableWallet } = useCollegeLocation();
   const navigate = useNavigate();
 
   // Check if student is banned on mount
@@ -811,8 +813,14 @@ export default function Cart() {
 
               <button
                 type="button"
-                onClick={() => setPaymentMethod('wallet')}
-                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${paymentMethod === 'wallet' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'}`}
+                onClick={() => {
+                  if (!enableWallet) {
+                    toast.info("This feature will be functional soon");
+                    return;
+                  }
+                  setPaymentMethod('wallet');
+                }}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${paymentMethod === 'wallet' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'} ${!enableWallet ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${paymentMethod === 'wallet' ? 'bg-mcd-red text-white' : 'bg-mcd-cream text-mcd-red'}`}>
@@ -821,9 +829,15 @@ export default function Cart() {
                   <div className="text-left">
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-sm">Prepaid Wallet</p>
-                      <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">FEES OFF</span>
+                      {!enableWallet ? (
+                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold uppercase">Coming Soon</span>
+                      ) : (
+                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">FEES OFF</span>
+                      )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Balance: ₹{walletBalance.toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {enableWallet ? `Balance: ₹${walletBalance.toFixed(2)}` : "Wallet feature is temporarily disabled"}
+                    </p>
                   </div>
                 </div>
                 {paymentMethod === 'wallet' && <Check className="h-5 w-5 text-mcd-red" />}

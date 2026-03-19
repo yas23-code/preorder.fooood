@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Wallet as WalletIcon, Plus, History, Loader2, IndianRupee, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Wallet as WalletIcon, Plus, History, Loader2, IndianRupee, TrendingUp, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 
 interface Transaction {
     id: string;
@@ -25,6 +26,7 @@ export default function Wallet() {
     const [isTopUpLoading, setIsTopUpLoading] = useState(false);
     const [verifyingPayment, setVerifyingPayment] = useState(false);
     const [customAmount, setCustomAmount] = useState<string>('');
+    const { enableWallet } = useCollegeLocation();
 
     const [searchParams, setSearchParams] = useSearchParams();
     const orderIdParam = searchParams.get('order_id');
@@ -186,12 +188,24 @@ export default function Wallet() {
                 </Card>
 
                 {/* Top Up Section */}
-                <section className="space-y-4">
-                    <h2 className="text-lg font-bold flex items-center gap-2">
+                <section className="space-y-4 relative">
+                    {!enableWallet && (
+                        <div className="absolute inset-0 z-20 bg-mcd-cream/60 backdrop-blur-[1px] flex items-center justify-center rounded-2xl border-2 border-dashed border-mcd-yellow/50 p-6">
+                            <div className="bg-white p-6 rounded-2xl shadow-xl text-center max-w-sm border border-mcd-border animate-fade-up">
+                                <WalletIcon className="h-12 w-12 text-mcd-yellow mx-auto mb-4" />
+                                <h3 className="text-xl font-bold mb-2">Wallet Coming Soon</h3>
+                                <p className="text-muted-foreground text-sm">
+                                    The wallet feature is currently being configured and will be functional very soon.
+                                    Stay tuned!
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                    <h2 className={`text-lg font-bold flex items-center gap-2 ${!enableWallet ? 'opacity-50' : ''}`}>
                         <Plus className="h-5 w-5 text-mcd-red" />
                         Add Money
                     </h2>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className={`grid grid-cols-2 gap-3 ${!enableWallet ? 'opacity-50' : ''}`}>
                         {TOP_UP_AMOUNTS.map((amount) => {
                             const bonusText = getBonusText(amount);
                             return (
@@ -200,7 +214,7 @@ export default function Wallet() {
                                     variant="outline"
                                     className="h-auto py-4 flex flex-col items-center gap-1 border-2 border-white bg-white hover:border-mcd-red hover:bg-mcd-red/5 transition-all shadow-sm"
                                     onClick={() => handleTopUp(amount)}
-                                    disabled={isTopUpLoading}
+                                    disabled={isTopUpLoading || !enableWallet}
                                 >
                                     <span className="text-xl font-bold text-foreground">₹{amount}</span>
                                     {bonusText && (
@@ -213,7 +227,7 @@ export default function Wallet() {
                         })}
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className={`flex gap-2 ${!enableWallet ? 'opacity-50' : ''}`}>
                         <div className="relative flex-1">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                             <input
@@ -222,19 +236,20 @@ export default function Wallet() {
                                 className="w-full pl-7 pr-4 h-11 rounded-lg border border-mcd-border bg-white focus:outline-none focus:ring-2 focus:ring-mcd-red/20"
                                 value={customAmount}
                                 onChange={(e) => setCustomAmount(e.target.value)}
+                                disabled={!enableWallet}
                             />
                         </div>
                         <Button
                             variant="gradient"
                             className="h-11 px-6 shadow-md"
                             onClick={() => handleTopUp(Number(customAmount))}
-                            disabled={isTopUpLoading || !customAmount || Number(customAmount) < 10}
+                            disabled={isTopUpLoading || !customAmount || Number(customAmount) < 10 || !enableWallet}
                         >
                             {isTopUpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
                         </Button>
                     </div>
 
-                    <div className="bg-mcd-yellow/10 border border-mcd-yellow/30 p-4 rounded-xl flex items-start gap-3">
+                    <div className={`bg-mcd-yellow/10 border border-mcd-yellow/30 p-4 rounded-xl flex items-start gap-3 ${!enableWallet ? 'opacity-50' : ''}`}>
                         <TrendingUp className="h-5 w-5 text-mcd-yellow mt-0.5" />
                         <div className="text-xs space-y-1">
                             <p className="font-bold text-mcd-yellow-700">Wallet Benefits</p>
