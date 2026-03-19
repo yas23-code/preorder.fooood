@@ -282,16 +282,6 @@ export default function Cart() {
   // So for wallet, total = discountedAmount. No fees.
 
   const fees = useMemo(() => {
-    if (paymentMethod === 'wallet') {
-      return {
-        subtotal: discountedAmount,
-        platformFee: 0,
-        pgFee: 0,
-        totalPayable: discountedAmount,
-        netProfit: discountedAmount,
-        orderAmount: discountedAmount
-      } as any;
-    }
     return calculateFees(discountedAmount);
   }, [discountedAmount, paymentMethod]);
 

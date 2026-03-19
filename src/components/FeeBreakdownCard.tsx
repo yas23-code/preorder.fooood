@@ -43,13 +43,15 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, me
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground flex items-center gap-1">
-          Platform Fee
-          <Info className="h-3 w-3 text-muted-foreground/60" />
-        </span>
-        <span className="text-foreground">₹{fees.platformFee.toFixed(2)}</span>
-      </div>
+      {fees.platformFee > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground flex items-center gap-1">
+            Platform Fee
+            <Info className="h-3 w-3 text-muted-foreground/60" />
+          </span>
+          <span className="text-foreground">₹{fees.platformFee.toFixed(2)}</span>
+        </div>
+      )}
 
       {showNetProfit && (
         <>
