@@ -19,6 +19,7 @@ Deno.serve(async (req) => {
     const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@preorder.food'
 
     if (!BREVO_API_KEY) {
       console.error('BREVO_API_KEY not configured')
@@ -50,25 +51,25 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if vendor_email is configured for this canteen
-    if (!canteen.vendor_email) {
-      console.error('Vendor email not configured for canteen:', canteen_id)
-      return new Response(
-        JSON.stringify({ success: false, error: 'Vendor email not configured for this canteen' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Get vendor profile for name
+    // Get vendor profile for name and email fallback
     const { data: vendorProfile, error: vendorError } = await supabase
       .from('profiles')
-      .select('name')
+      .select('name, email')
       .eq('id', canteen.vendor_id)
       .single()
 
     if (vendorError) {
       console.error('Failed to get vendor profile:', vendorError)
     }
+
+    let vendorEmail = canteen.vendor_email
+    if (!vendorEmail) {
+      console.log(`Vendor email not set for canteen, falling back to profile email for vendor: ${canteen.vendor_id}`)
+      vendorEmail = vendorProfile?.email
+    }
+
+    // Final fallback
+    vendorEmail = vendorEmail || FROM_EMAIL
 
     // Get order details
     const { data: order, error: orderError } = await supabase
@@ -109,51 +110,9 @@ Deno.serve(async (req) => {
     }
 
     const items = orderItems || []
-    // Calculate actual food total from item prices (not from order.total which includes fees)
     const orderTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-    const vendorEmail = canteen.vendor_email
     const vendorName = vendorProfile?.name || 'Vendor'
     const canteenName = canteen.name || 'Your Canteen'
-
-    // Generate order items HTML
-    const orderItemsHtml = items.length > 0 ? `
-      <div style="margin: 25px 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-        <div style="background-color: #f3f4f6; padding: 12px 16px; border-bottom: 1px solid #e5e7eb;">
-          <h3 style="margin: 0; font-size: 16px; color: #374151;">📦 Order Items</h3>
-        </div>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background-color: #f9fafb;">
-              <th style="text-align: left; padding: 12px 16px; font-size: 14px; color: #6b7280; font-weight: 600;">Item</th>
-              <th style="text-align: center; padding: 12px 16px; font-size: 14px; color: #6b7280; font-weight: 600;">Qty</th>
-              <th style="text-align: right; padding: 12px 16px; font-size: 14px; color: #6b7280; font-weight: 600;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map((item, index) => `
-              <tr style="border-top: 1px solid #e5e7eb;${index % 2 === 1 ? ' background-color: #f9fafb;' : ''}">
-                <td style="padding: 12px 16px; font-size: 14px; color: #374151;">${item.name}</td>
-                <td style="text-align: center; padding: 12px 16px; font-size: 14px; color: #374151;">${item.quantity}</td>
-                <td style="text-align: right; padding: 12px 16px; font-size: 14px; color: #374151;">₹${(item.price * item.quantity).toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-          <tfoot>
-            <tr style="border-top: 2px solid #e5e7eb; background-color: #f3f4f6;">
-              <td colspan="2" style="padding: 12px 16px; font-size: 16px; font-weight: bold; color: #374151;">Total</td>
-              <td style="text-align: right; padding: 12px 16px; font-size: 16px; font-weight: bold; color: #2563eb;">₹${Number(orderTotal).toFixed(2)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    ` : ''
-
-    // Generate order items text
-    const orderItemsText = items.length > 0 ? `
-Order Items:
-${items.map(item => `- ${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}`).join('\n')}
-Total: ₹${Number(orderTotal).toFixed(2)}
-` : ''
 
     const orderDate = new Date(order.created_at).toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
@@ -163,7 +122,7 @@ Total: ₹${Number(orderTotal).toFixed(2)}
 
     console.log(`Sending new order email to vendor: ${vendorEmail} for order: ${order_id}`)
 
-    // Send email via Brevo API - using canteen's vendor_email as sender
+    // Send email via Brevo API - using canteen's name & vendor_email as sender
     const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -174,7 +133,7 @@ Total: ₹${Number(orderTotal).toFixed(2)}
       body: JSON.stringify({
         sender: {
           name: canteenName,
-          email: vendorEmail,
+          email: FROM_EMAIL, // Use system email for better deliverability
         },
         to: [
           {

@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
     const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@preorder.food'
 
     if (!BREVO_API_KEY) {
       console.error('BREVO_API_KEY not configured')
@@ -38,11 +39,35 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // Get canteen details with vendor_email
+    let finalCanteenId = canteen_id
+
+    // If canteen_id is missing, fetch it from the order
+    if (!finalCanteenId && order_id) {
+      console.log(`Canteen ID missing, fetching from order: ${order_id}`)
+      const { data: orderData, error: orderFetchError } = await supabase
+        .from('orders')
+        .select('canteen_id')
+        .eq('id', order_id)
+        .single()
+
+      if (!orderFetchError && orderData) {
+        finalCanteenId = orderData.canteen_id
+      }
+    }
+
+    if (!finalCanteenId) {
+      console.error('Canteen ID is required')
+      return new Response(
+        JSON.stringify({ success: false, error: 'Canteen ID not provided and could not be fetched' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Get canteen details
     const { data: canteen, error: canteenError } = await supabase
       .from('canteens')
-      .select('name, vendor_email')
-      .eq('id', canteen_id)
+      .select('name, vendor_email, vendor_id')
+      .eq('id', finalCanteenId)
       .single()
 
     if (canteenError || !canteen) {
@@ -53,14 +78,22 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if vendor_email is configured for this canteen
-    if (!canteen.vendor_email) {
-      console.error('Vendor email not configured for canteen:', canteen_id)
-      return new Response(
-        JSON.stringify({ success: false, error: 'Vendor email not configured for this canteen' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    let vendorEmail = canteen.vendor_email
+
+    // Fallback to vendor's profile email if canteen vendor_email is not configured
+    if (!vendorEmail) {
+      console.log(`Vendor email not set for canteen, falling back to profile email for vendor: ${canteen.vendor_id}`)
+      const { data: vendorProfile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', canteen.vendor_id)
+        .single()
+
+      vendorEmail = vendorProfile?.email
     }
+
+    // Final fallback to system email
+    vendorEmail = vendorEmail || FROM_EMAIL
 
     // Check if email already sent for this order (prevent duplicates)
     const { data: existingEmail, error: checkError } = await supabase
@@ -121,7 +154,6 @@ Deno.serve(async (req) => {
     const userName = profile.name || 'Customer'
     const items = orderItems || []
     const orderTotal = orderData?.total || 0
-    const vendorEmail = canteen.vendor_email
     const finalCanteenName = canteen_name || canteen.name || 'Your Canteen'
 
     // Generate order items HTML
@@ -266,7 +298,6 @@ This is an automated message from PreOrder.`,
 
     if (insertError) {
       console.error('Failed to record email sent:', insertError)
-      // Don't fail the request, email was sent successfully
     }
 
     return new Response(
