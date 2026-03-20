@@ -114,6 +114,46 @@ Deno.serve(async (req) => {
     const vendorName = vendorProfile?.name || 'Vendor'
     const canteenName = canteen.name || 'Your Canteen'
 
+    // Generate order items HTML
+    const orderItemsHtml = items.length > 0 ? `
+      <div style="margin: 25px 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #f3f4f6; padding: 12px 16px; border-bottom: 1px solid #e5e7eb;">
+          <h3 style="margin: 0; font-size: 16px; color: #374151;">📦 Order Items</h3>
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #f9fafb;">
+              <th style="text-align: left; padding: 12px 16px; font-size: 14px; color: #6b7280; font-weight: 600;">Item</th>
+              <th style="text-align: center; padding: 12px 16px; font-size: 14px; color: #6b7280; font-weight: 600;">Qty</th>
+              <th style="text-align: right; padding: 12px 16px; font-size: 14px; color: #6b7280; font-weight: 600;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((item, index) => `
+              <tr style="border-top: 1px solid #e5e7eb;${index % 2 === 1 ? ' background-color: #f9fafb;' : ''}">
+                <td style="padding: 12px 16px; font-size: 14px; color: #374151;">${item.name}</td>
+                <td style="text-align: center; padding: 12px 16px; font-size: 14px; color: #374151;">${item.quantity}</td>
+                <td style="text-align: right; padding: 12px 16px; font-size: 14px; color: #374151;">₹${(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot>
+            <tr style="border-top: 2px solid #e5e7eb; background-color: #f3f4f6;">
+              <td colspan="2" style="padding: 12px 16px; font-size: 16px; font-weight: bold; color: #374151;">Total</td>
+              <td style="text-align: right; padding: 12px 16px; font-size: 16px; font-weight: bold; color: #2563eb;">₹${Number(orderTotal).toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    ` : ''
+
+    // Generate order items text
+    const orderItemsText = items.length > 0 ? `
+Order Items:
+${items.map(item => `- ${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}`).join('\n')}
+Total: ₹${Number(orderTotal).toFixed(2)}
+` : ''
+
     const orderDate = new Date(order.created_at).toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       dateStyle: 'medium',
@@ -122,7 +162,7 @@ Deno.serve(async (req) => {
 
     console.log(`Sending new order email to vendor: ${vendorEmail} for order: ${order_id}`)
 
-    // Send email via Brevo API - using canteen's name & vendor_email as sender
+    // Send email via Brevo API - using system email for better deliverability
     const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -133,7 +173,11 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         sender: {
           name: canteenName,
-          email: FROM_EMAIL, // Use system email for better deliverability
+          email: FROM_EMAIL,
+        },
+        replyTo: {
+          email: FROM_EMAIL,
+          name: 'PreOrder Support',
         },
         to: [
           {

@@ -344,38 +344,57 @@ export default function StudentOrders() {
   };
 
   const clearOrderHistory = async () => {
-    if (!user || orders.length === 0) return;
+    const isCanteenTab = activeTab === 'canteen';
+    const currentOrders = isCanteenTab ? orders : shopOrders;
+
+    if (!user || currentOrders.length === 0) return;
+
+    const completedOrders = currentOrders.filter(o => o.status === 'completed');
+    if (completedOrders.length === 0) {
+      toast({
+        title: 'No completed orders',
+        description: 'Only completed orders can be removed from history.',
+      });
+      return;
+    }
 
     setIsClearing(true);
     try {
-      // Delete all order items first (due to foreign key constraint)
-      const orderIds = orders.map(o => o.id);
+      const orderIds = completedOrders.map(o => o.id);
+      const itemsTable = isCanteenTab ? 'order_items' : 'shop_order_items';
+      const ordersTable = isCanteenTab ? 'orders' : 'shop_orders';
 
+      // Delete items first
       const { error: itemsError } = await supabase
-        .from('order_items')
+        .from(itemsTable)
         .delete()
         .in('order_id', orderIds);
 
       if (itemsError) throw itemsError;
 
-      // Then delete all orders
+      // Then delete orders
       const { error: ordersError } = await supabase
-        .from('orders')
+        .from(ordersTable)
         .delete()
-        .eq('user_id', user.id);
+        .in('id', orderIds);
 
       if (ordersError) throw ordersError;
 
-      setOrders([]);
+      if (isCanteenTab) {
+        setOrders(prev => prev.filter(o => o.status !== 'completed'));
+      } else {
+        setShopOrders(prev => prev.filter(o => o.status !== 'completed'));
+      }
+
       toast({
         title: 'History cleared',
-        description: 'All orders have been removed from your history.',
+        description: `${completedOrders.length} completed ${activeTab} orders have been removed.`,
       });
     } catch (error) {
-      console.error('Error clearing order history:', error);
+      console.error('Error clearing history:', error);
       toast({
         title: 'Error',
-        description: 'Failed to clear order history. Please try again.',
+        description: 'Failed to clear history. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -383,12 +402,22 @@ export default function StudentOrders() {
     }
   };
 
-  const deleteOrder = async (orderId: string) => {
+  const deleteShopOrder = async (orderId: string) => {
+    const order = shopOrders.find(o => o.id === orderId);
+    if (order && order.status !== 'completed') {
+      toast({
+        title: 'Cannot delete',
+        description: 'Only completed orders can be removed from history.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setDeletingOrderId(orderId);
     try {
-      // Delete order items first
+      // Delete shop order items first
       const { error: itemsError } = await supabase
-        .from('order_items')
+        .from('shop_order_items')
         .delete()
         .eq('order_id', orderId);
 
@@ -396,22 +425,22 @@ export default function StudentOrders() {
 
       // Then delete the order
       const { error: orderError } = await supabase
-        .from('orders')
+        .from('shop_orders')
         .delete()
         .eq('id', orderId);
 
       if (orderError) throw orderError;
 
-      setOrders(prev => prev.filter(o => o.id !== orderId));
+      setShopOrders(prev => prev.filter(o => o.id !== orderId));
       toast({
-        title: 'Order deleted',
+        title: 'Shop order deleted',
         description: 'Order has been removed from your history.',
       });
     } catch (error) {
-      console.error('Error deleting order:', error);
+      console.error('Error deleting shop order:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete order. Please try again.',
+        description: 'Failed to delete shop order. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -554,17 +583,17 @@ export default function StudentOrders() {
                 <Button
                   variant="outline"
                   className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                  disabled={(activeTab === 'canteen' ? orders.length === 0 : shopOrders.length === 0) || isClearing}
+                  disabled={(activeTab === 'canteen' ? !orders.some(o => o.status === 'completed') : !shopOrders.some(o => o.status === 'completed')) || isClearing}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  {isClearing ? 'Clearing...' : 'Clear History'}
+                  {isClearing ? 'Clearing...' : 'Clear Completed'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Clear Order History?</AlertDialogTitle>
+                  <AlertDialogTitle>Clear Completed Orders?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete all {activeTab === 'canteen' ? orders.length : shopOrders.length} {activeTab} orders from your history. This action cannot be undone.
+                    This will permanently delete all completed {activeTab} orders from your history. Active orders will not be affected.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -573,7 +602,7 @@ export default function StudentOrders() {
                     onClick={clearOrderHistory}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    Clear All
+                    Clear Completed
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -620,39 +649,41 @@ export default function StudentOrders() {
                             <span className="text-lg font-bold">#{order.order_no}</span>
                           </div>
                         )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              disabled={deletingOrderId === order.id}
-                            >
-                              {deletingOrderId === order.id ? (
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete this order?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently remove this order from your history. This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteOrder(order.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        {order.status === 'completed' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                disabled={deletingOrderId === order.id}
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                                {deletingOrderId === order.id ? (
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                ) : (
+                                  <X className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this order?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove this order from your history. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteOrder(order.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
 
@@ -785,13 +816,49 @@ export default function StudentOrders() {
                           {statusConfig[order.status as keyof typeof statusConfig]?.label || order.status}
                         </Badge>
                       </div>
-                      {/* Order Number Badge */}
-                      {order.order_no && (
-                        <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-2">
-                          <span className="text-xs font-medium">ORDER</span>
-                          <span className="text-lg font-bold">#{order.order_no}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {order.order_no && (
+                          <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-2">
+                            <span className="text-xs font-medium">ORDER</span>
+                            <span className="text-lg font-bold">#{order.order_no}</span>
+                          </div>
+                        )}
+                        {order.status === 'completed' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                disabled={deletingOrderId === order.id}
+                              >
+                                {deletingOrderId === order.id ? (
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                ) : (
+                                  <X className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete this order?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove this shop order from your history.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteShopOrder(order.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </div>
 
                     {/* Address */}

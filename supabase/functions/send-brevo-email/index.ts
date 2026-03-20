@@ -198,7 +198,7 @@ Total: ₹${Number(orderTotal).toFixed(2)}
 
     console.log(`Sending email from ${vendorEmail} to: ${userEmail} for order: ${order_id} with ${items.length} items`)
 
-    // Send email via Brevo API - using canteen's vendor_email as sender
+    // Send email via Brevo API - using canteen's name & system email as sender
     const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -209,7 +209,11 @@ Total: ₹${Number(orderTotal).toFixed(2)}
       body: JSON.stringify({
         sender: {
           name: finalCanteenName,
+          email: FROM_EMAIL,
+        },
+        replyTo: {
           email: vendorEmail,
+          name: finalCanteenName,
         },
         to: [
           {
