@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-muted-foreground mb-6">
               We encountered an unexpected error. Don't worry, your data is safe.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button onClick={this.handleRetry} variant="outline" className="gap-2">
                 <RefreshCw className="w-4 h-4" />
@@ -69,7 +69,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="mt-6 text-left">
                 <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
                   Error details (dev only)
