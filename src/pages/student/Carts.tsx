@@ -7,7 +7,7 @@ import { ShoppingCart, ArrowLeft, ChevronRight, Trash2 } from 'lucide-react';
 export default function Carts() {
   const { carts, getTotal, getItemCount, clearCart, getActiveCanteenIds } = useCart();
   const navigate = useNavigate();
-  
+
   const activeCanteenIds = getActiveCanteenIds();
 
   if (activeCanteenIds.length === 0) {
@@ -15,7 +15,7 @@ export default function Carts() {
       <div className="min-h-screen bg-mcd-cream">
         <div className="border-b border-mcd-border bg-mcd-cream sticky top-0 z-10">
           <div className="container mx-auto px-3 md:px-4 py-3 md:py-4 flex items-center gap-3 md:gap-4">
-            <Link 
+            <Link
               to="/student/dashboard"
               className="flex items-center gap-1 md:gap-2 text-muted-foreground hover:text-mcd-red transition-colors text-sm md:text-base"
             >
@@ -49,7 +49,7 @@ export default function Carts() {
       {/* Header */}
       <div className="border-b border-mcd-border bg-mcd-cream sticky top-0 z-10">
         <div className="container mx-auto px-3 md:px-4 py-3 md:py-4 flex items-center gap-3 md:gap-4">
-          <Link 
+          <Link
             to="/student/dashboard"
             className="flex items-center gap-1 md:gap-2 text-muted-foreground hover:text-mcd-red transition-colors text-sm md:text-base"
           >
@@ -62,20 +62,22 @@ export default function Carts() {
           </div>
         </div>
       </div>
-      
+
       <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-3xl">
         <p className="text-sm md:text-base text-muted-foreground mb-4">
           You have items from {activeCanteenIds.length} canteen{activeCanteenIds.length > 1 ? 's' : ''}
         </p>
-        
+
         <div className="space-y-3 md:space-y-4">
           {activeCanteenIds.map((canteenId) => {
             const cart = carts[canteenId];
+            if (!cart || !cart.items) return null;
+
             const total = getTotal(canteenId);
             const itemCount = getItemCount(canteenId);
-            
+
             return (
-              <div 
+              <div
                 key={canteenId}
                 className="bg-white rounded-xl md:rounded-2xl shadow-card border border-mcd-border overflow-hidden"
               >
@@ -91,11 +93,11 @@ export default function Carts() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   <p className="text-sm text-muted-foreground mb-3">
                     {itemCount} item{itemCount > 1 ? 's' : ''} • <span className="text-mcd-red font-semibold">₹{total}</span>
                   </p>
-                  
+
                   {/* Item previews */}
                   <div className="text-sm text-muted-foreground mb-4">
                     {cart.items.slice(0, 3).map((item, idx) => (
@@ -106,8 +108,8 @@ export default function Carts() {
                     ))}
                     {cart.items.length > 3 && ` +${cart.items.length - 3} more`}
                   </div>
-                  
-                  <Button 
+
+                  <Button
                     className="w-full bg-mcd-yellow hover:bg-yellow-400 text-foreground font-semibold h-10 md:h-11 rounded-xl text-sm md:text-base"
                     onClick={() => navigate(`/student/cart/${canteenId}`)}
                   >

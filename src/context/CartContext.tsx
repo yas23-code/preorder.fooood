@@ -51,32 +51,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCart = useCallback((item: MenuItem, canteenId: string, canteenName: string, size?: SizeVariant, priceOverride?: number) => {
     setCarts(prev => {
       const canteenCart = prev[canteenId] || { items: [], canteenName };
-      const existing = canteenCart.items.find(i => 
+      const existing = canteenCart.items.find(i =>
         i.menuItem.id === item.id && i.size === size
       );
-      
+
       let newItems: CartItem[];
       if (existing) {
-        newItems = canteenCart.items.map(i => 
+        newItems = canteenCart.items.map(i =>
           (i.menuItem.id === item.id && i.size === size)
             ? { ...i, quantity: i.quantity + 1 }
             : i
         );
       } else {
-        newItems = [...canteenCart.items, { 
-          menuItem: item, 
-          quantity: 1, 
-          size, 
-          priceOverride 
+        newItems = [...canteenCart.items, {
+          menuItem: item,
+          quantity: 1,
+          size,
+          priceOverride
         }];
       }
-      
+
       return {
         ...prev,
         [canteenId]: { items: newItems, canteenName }
       };
     });
-    
+
     const sizeLabel = size ? ` (${size.charAt(0).toUpperCase() + size.slice(1)})` : '';
     toast.success(`Added ${item.name}${sizeLabel} to cart`);
   }, []);
@@ -85,16 +85,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCarts(prev => {
       const canteenCart = prev[canteenId];
       if (!canteenCart) return prev;
-      
-      const newItems = canteenCart.items.filter(i => 
+
+      const newItems = canteenCart.items.filter(i =>
         !(i.menuItem.id === itemId && i.size === size)
       );
-      
+
       if (newItems.length === 0) {
         const { [canteenId]: _, ...rest } = prev;
         return rest;
       }
-      
+
       return {
         ...prev,
         [canteenId]: { ...canteenCart, items: newItems }
@@ -108,16 +108,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeFromCart(canteenId, itemId, size);
       return;
     }
-    
+
     setCarts(prev => {
       const canteenCart = prev[canteenId];
       if (!canteenCart) return prev;
-      
+
       return {
         ...prev,
         [canteenId]: {
           ...canteenCart,
-          items: canteenCart.items.map(i => 
+          items: canteenCart.items.map(i =>
             (i.menuItem.id === itemId && i.size === size)
               ? { ...i, quantity }
               : i
@@ -154,7 +154,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [carts]);
 
   const getTotalItemCount = useCallback(() => {
-    return Object.values(carts).reduce((total, cart) => 
+    return Object.values(carts).reduce((total, cart) =>
       total + cart.items.reduce((sum, item) => sum + item.quantity, 0), 0
     );
   }, [carts]);
@@ -168,7 +168,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [carts]);
 
   const getActiveCanteenIds = useCallback(() => {
-    return Object.keys(carts).filter(id => carts[id].items.length > 0);
+    return Object.keys(carts).filter(id => carts[id]?.items?.length > 0);
   }, [carts]);
 
   return (

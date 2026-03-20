@@ -187,9 +187,8 @@ export default function Cart() {
     document.body.appendChild(script);
 
     return () => {
-      const existingScript = document.querySelector('script[src="https://sdk.cashfree.com/js/v3/cashfree.js"]');
-      if (existingScript) {
-        document.body.removeChild(existingScript);
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
       }
     };
   }, []);
@@ -215,9 +214,12 @@ export default function Cart() {
     if (items.length === 0) return 0;
 
     // Get max prep time from all items
-    const maxPrepTime = Math.max(
-      ...items.map(item => item.menuItem.prep_time || getDefaultPrepTime(item.menuItem.category))
-    );
+    const maxPrepTime = items.length > 0
+      ? Math.max(...items.map(item => {
+        if (!item?.menuItem) return 10;
+        return item.menuItem.prep_time || getDefaultPrepTime(item.menuItem.category);
+      }))
+      : 0;
 
     // Calculate: (max_prep_time + (pending_orders * 2)) * peak_multiplier
     const peakMultiplier = getPeakMultiplier();

@@ -86,7 +86,7 @@ export function ShopCartProvider({ children }: { children: React.ReactNode }) {
       if (!cart) return prev;
 
       const updatedItems = cart.items.filter(item => item.id !== itemId);
-      
+
       if (updatedItems.length === 0) {
         const { [shopId]: _, ...rest } = prev;
         return rest;
@@ -140,8 +140,8 @@ export function ShopCartProvider({ children }: { children: React.ReactNode }) {
   }, [carts]);
 
   const getTotalItemCount = useCallback(() => {
-    return Object.values(carts).reduce((sum, cart) => 
-      sum + cart.items.reduce((s, item) => s + item.quantity, 0), 0
+    return Object.values(carts).reduce((sum, cart) =>
+      sum + (cart?.items?.reduce((s, item) => s + (item?.quantity || 0), 0) || 0), 0
     );
   }, [carts]);
 

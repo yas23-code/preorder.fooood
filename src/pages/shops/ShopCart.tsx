@@ -11,11 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { 
-  ArrowLeft, 
-  Minus, 
-  Plus, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Minus,
+  Plus,
+  Trash2,
   ShoppingCart,
   Loader2,
   Store,
@@ -41,7 +41,7 @@ const getPeakMultiplier = (): number => {
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const istTime = new Date(utc + (istOffset * 60000));
   const hour = istTime.getHours();
-  
+
   if (hour >= 11 && hour < 14) return 1.3;
   if (hour >= 17 && hour < 19) return 1.2;
   return 1.0;
@@ -70,7 +70,7 @@ export default function ShopCart() {
   useEffect(() => {
     const fetchEtaData = async () => {
       if (!shopId || !cart) return;
-      
+
       try {
         // Fetch pending orders count
         const { count } = await supabase
@@ -78,7 +78,7 @@ export default function ShopCart() {
           .select('*', { count: 'exact', head: true })
           .eq('shop_id', shopId)
           .in('status', ['pending', 'confirmed', 'preparing']);
-        
+
         setPendingOrderCount(count || 0);
 
         // Fetch prep times for cart items
@@ -106,16 +106,16 @@ export default function ShopCart() {
   // Calculate estimated time
   const estimatedTime = useMemo(() => {
     if (!cart || cart.items.length === 0) return 0;
-    
+
     // Get max prep time from all items
     const maxPrepTime = Math.max(
       ...cart.items.map(item => menuItemPrepTimes[item.menuItemId] || 10)
     );
-    
+
     // Calculate: (max_prep_time + (pending_orders * 2)) * peak_multiplier
     const peakMultiplier = getPeakMultiplier();
     const totalMinutes = Math.round((maxPrepTime + (pendingOrderCount * 2)) * peakMultiplier);
-    
+
     return totalMinutes;
   }, [cart, pendingOrderCount, menuItemPrepTimes]);
 
@@ -135,9 +135,8 @@ export default function ShopCart() {
     document.body.appendChild(script);
 
     return () => {
-      const existingScript = document.querySelector('script[src="https://sdk.cashfree.com/js/v3/cashfree.js"]');
-      if (existingScript) {
-        document.body.removeChild(existingScript);
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
       }
     };
   }, []);
@@ -264,7 +263,7 @@ export default function ShopCart() {
           paymentSessionId: paymentData.paymentSessionId,
           redirectTarget: '_self',
         });
-        
+
         if (result.error) {
           console.error('Cashfree checkout error:', result.error);
           toast.error(result.error.message || 'Payment failed. Please try again.');
@@ -331,7 +330,7 @@ export default function ShopCart() {
           {/* Cart Items */}
           <div className="space-y-4">
             <h2 className="font-semibold">Order Items</h2>
-            
+
             {cart.items.map((item) => (
               <Card key={item.id}>
                 <CardContent className="p-4">
@@ -347,11 +346,11 @@ export default function ShopCart() {
                         <Store className="w-6 h-6 text-muted-foreground" />
                       </div>
                     )}
-                    
+
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium truncate">{item.name}</h3>
                       <p className="text-sm text-primary font-semibold">₹{item.price}</p>
-                      
+
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-2">
                           <Button
@@ -372,7 +371,7 @@ export default function ShopCart() {
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
-                        
+
                         <Button
                           variant="ghost"
                           size="icon"
@@ -383,7 +382,7 @@ export default function ShopCart() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <p className="font-semibold">
                       ₹{(item.price * item.quantity).toFixed(2)}
                     </p>
@@ -410,7 +409,7 @@ export default function ShopCart() {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number *</Label>
                   <Input
@@ -422,7 +421,7 @@ export default function ShopCart() {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="notes">Special Instructions</Label>
                   <Textarea
@@ -456,7 +455,7 @@ export default function ShopCart() {
                     <span>~{estimatedTime} minutes</span>
                   </div>
                 )}
-                
+
                 {user ? (
                   <Button
                     onClick={handlePlaceOrder}

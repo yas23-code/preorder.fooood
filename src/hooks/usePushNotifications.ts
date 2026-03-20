@@ -9,63 +9,114 @@ export function usePushNotifications(userId: string | undefined) {
         typeof Notification !== 'undefined' ? Notification.permission : 'default'
     );
     const [isSubscribing, setIsSubscribing] = useState(false);
+    const [isSubscribed, setIsSubscribed] = useState(false);
 
     useEffect(() => {
-        if (userId && permission === 'granted') {
-            subscribeUserToPush();
+        checkCurrentSubscription();
+    }, [userId]);
+
+    const checkCurrentSubscription = async () => {
+        if (!userId || !('serviceWorker' in navigator)) return;
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            setIsSubscribed(!!subscription);
+
+            if (subscription && permission === 'granted') {
+                // Sync with backend if needed
+                await syncSubscriptionWithBackend(subscription);
+            }
+        } catch (err) {
+            console.error('Error checking subscription:', err);
         }
-    }, [userId, permission]);
+    };
 
     const requestPermission = async () => {
         if (typeof Notification === 'undefined') return;
 
-        const result = await Notification.requestPermission();
-        setPermission(result);
-        return result;
+        try {
+            const result = await Notification.requestPermission();
+            setPermission(result);
+            if (result === 'granted') {
+                await subscribeUserToPush();
+            }
+            return result;
+        } catch (err) {
+            console.error('Error requesting notification permission:', err);
+            return 'denied';
+        }
+    };
+
+    const syncSubscriptionWithBackend = async (subscription: PushSubscription) => {
+        if (!userId) return;
+        const { auth, p256dh } = subscription.toJSON() as { auth: string, p256dh: string };
+
+        await supabase
+            .from('push_subscriptions')
+            .upsert({
+                user_id: userId,
+                endpoint: subscription.endpoint,
+                auth: auth,
+                p256dh: p256dh,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id' });
     };
 
     const subscribeUserToPush = async () => {
-        if (!userId || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+        if (!userId || !('serviceWorker' in navigator)) return;
 
         try {
             setIsSubscribing(true);
             const registration = await navigator.serviceWorker.ready;
 
-            // Check if already subscribed
             let subscription = await registration.pushManager.getSubscription();
 
             if (!subscription) {
+                if (!VAPID_PUBLIC_KEY) {
+                    console.error('VAPID public key is missing in environment variables');
+                    return;
+                }
+
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY.trim())
                 });
-                console.log('User is subscribed:', subscription);
             }
 
-            // Send subscription to backend
-            const { auth, p256dh } = subscription.toJSON() as { auth: string, p256dh: string };
-
-            const { error } = await supabase
-                .from('push_subscriptions')
-                .upsert({
-                    user_id: userId,
-                    endpoint: subscription.endpoint,
-                    auth: auth,
-                    p256dh: p256dh,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
-
-            if (error) {
-                console.error('Error saving push subscription:', error);
-            }
+            await syncSubscriptionWithBackend(subscription);
+            setIsSubscribed(true);
+            toast.success("Notifications enabled!");
         } catch (err) {
             console.error('Failed to subscribe the user: ', err);
+            toast.error("Failed to enable notifications. Please check site settings.");
         } finally {
             setIsSubscribing(false);
         }
     };
 
-    return { permission, requestPermission, isSubscribing };
+    const sendTestNotification = async () => {
+        if (!userId) return;
+
+        try {
+            const { data, error } = await supabase.functions.invoke('send-web-push', {
+                body: {
+                    user_id: userId,
+                    title: 'preorder.food',
+                    body: 'This is a test notification! 🚀',
+                    url: '/student/orders'
+                }
+            });
+
+            if (error) throw error;
+            toast.success("Test notification sent!");
+        } catch (err) {
+            console.error('Error sending test notification:', err);
+            toast.error("Failed to send test push. Ensure notifications are enabled.");
+        }
+    };
+
+    return { permission, requestPermission, isSubscribed, isSubscribing, sendTestNotification };
 }
 
 function urlBase64ToUint8Array(base64String: string) {

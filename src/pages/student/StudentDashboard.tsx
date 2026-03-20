@@ -117,7 +117,7 @@ export default function StudentDashboard() {
     }
   }, [activeOrder?.canteenId]);
 
-  const { permission, requestPermission } = usePushNotifications(user?.id);
+  const { permission, requestPermission, isSubscribed, sendTestNotification } = usePushNotifications(user?.id);
 
   // Check if user is banned on mount
   useEffect(() => {
@@ -152,7 +152,6 @@ export default function StudentDashboard() {
     }
   }, [permission, user]);
 
-  // Show toast if navigated from successful payment
   useEffect(() => {
     if (location.state?.orderSuccess) {
       toast.custom(() => (
@@ -294,15 +293,35 @@ export default function StudentDashboard() {
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0 mr-4 mt-2" align="end">
                   <div className="p-3 border-b border-mcd-border flex items-center justify-between">
-                    <h3 className="font-semibold text-sm">Notifications</h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                      className="text-xs h-7 px-2"
-                    >
-                      {notificationsEnabled ? 'Mute' : 'Unmute'}
-                    </Button>
+                    <div>
+                      <h3 className="font-semibold text-sm">Notifications</h3>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className={`h-1.5 w-1.5 rounded-full ${isSubscribed ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                          Browser: {isSubscribed ? 'Ready' : 'Off'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isSubscribed && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={sendTestNotification}
+                          className="h-7 text-[10px] px-2 border-amber-200 text-amber-600 hover:bg-amber-50"
+                        >
+                          Test Push
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                        className="text-xs h-7 px-2"
+                      >
+                        {notificationsEnabled ? 'Mute' : 'Unmute'}
+                      </Button>
+                    </div>
                   </div>
                   <div className="max-h-64 overflow-y-auto">
                     {/* Canteen dismissed notifications - only when inside campus */}

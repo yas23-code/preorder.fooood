@@ -9,23 +9,40 @@ interface MembershipBannerProps {
 }
 
 // Helper: format "HH:MM:SS" or "HH:MM" → "5:00 PM"
-function formatTime(t: string) {
-    const [h, m] = t.split(':').map(Number);
+function formatTime(t: string | null | undefined) {
+    if (!t) return '';
+    const parts = t.split(':');
+    if (parts.length < 2) return t;
+
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+
+    if (isNaN(h) || isNaN(m)) return t;
+
     const displayH = h % 12 || 12;
     const ampm = h >= 12 ? 'PM' : 'AM';
     return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
 // Helper: is current IST time before startTime?
-function isTooEarly(startTime: string): boolean {
+function isTooEarly(startTime: string | null | undefined): boolean {
+    if (!startTime) return false;
+    const parts = startTime.split(':');
+    if (parts.length < 2) return false;
+
     const now = new Date();
     const istOffset = 5.5 * 60;
     const utc = now.getTime() + now.getTimezoneOffset() * 60000;
     const istTime = new Date(utc + istOffset * 60000);
     const currentH = istTime.getHours();
     const currentM = istTime.getMinutes();
-    const [startH, startM] = startTime.split(':').map(Number);
-    return currentH < startH || (currentH === startH && currentM < startM);
+
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+
+    if (isNaN(h) || isNaN(m)) return false;
+
+    return currentH < h || (currentH === h && currentM < m);
 }
 
 export function MembershipBanner({ subtotal, membershipDiscount, startTime }: MembershipBannerProps) {
