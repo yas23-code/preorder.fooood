@@ -10,6 +10,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { SuperAdminRoute } from "./components/SuperAdminRoute";
 import { AppWrapper } from "./components/AppWrapper";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Pages
 import Landing from "./pages/Landing";
@@ -73,6 +75,8 @@ const App = () => (
               <Toaster />
               <Sonner />
               <PWAInstallPrompt />
+              <Analytics />
+              <SpeedInsights />
               <BrowserRouter>
                 <Routes>
                   {/* Public Routes */}
