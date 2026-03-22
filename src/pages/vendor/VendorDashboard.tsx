@@ -80,12 +80,23 @@ export default function VendorDashboard() {
   const { playNotificationSound } = useNotificationSound();
   const { verifyCanteenOrder } = useQRVerification();
 
-  // Helper to get today's date boundaries in UTC (server time)
+  // Helper to get today's date boundaries, resetting at 11:00 AM local time
   const getTodayBoundaries = () => {
     const now = new Date();
-    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
-    return { startOfDay: startOfDay.toISOString(), endOfDay: endOfDay.toISOString() };
+    const currentHour = now.getHours();
+
+    const startOfShift = new Date(now);
+    // If before 11 AM, the "income day" started yesterday at 11 AM
+    if (currentHour < 11) {
+      startOfShift.setDate(startOfShift.getDate() - 1);
+    }
+    startOfShift.setHours(11, 0, 0, 0);
+
+    const endOfShift = new Date(startOfShift);
+    endOfShift.setDate(endOfShift.getDate() + 1);
+    endOfShift.setMilliseconds(endOfShift.getMilliseconds() - 1);
+
+    return { startOfDay: startOfShift.toISOString(), endOfDay: endOfShift.toISOString() };
   };
 
   // Helper to get current month's date boundaries in UTC (server time)

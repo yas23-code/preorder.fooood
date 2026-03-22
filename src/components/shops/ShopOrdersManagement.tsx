@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { QRCodeScanner } from '@/components/QRCodeScanner';
 import { useQRVerification } from '@/hooks/useQRVerification';
-import { 
-  Clock, 
-  CheckCircle, 
-  Package, 
+import {
+  Clock,
+  CheckCircle,
+  Package,
   Phone,
   User,
   Loader2,
@@ -90,12 +90,23 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
     return () => clearInterval(interval);
   }, []);
 
-  // Helper to get today's date boundaries
+  // Helper to get today's date boundaries, resetting at 11:00 AM local time
   const getTodayBoundaries = () => {
     const now = new Date();
-    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
-    return { startOfDay: startOfDay.toISOString(), endOfDay: endOfDay.toISOString() };
+    const currentHour = now.getHours();
+
+    const startOfShift = new Date(now);
+    // If before 11 AM, the "income day" started yesterday at 11 AM
+    if (currentHour < 11) {
+      startOfShift.setDate(startOfShift.getDate() - 1);
+    }
+    startOfShift.setHours(11, 0, 0, 0);
+
+    const endOfShift = new Date(startOfShift);
+    endOfShift.setDate(endOfShift.getDate() + 1);
+    endOfShift.setMilliseconds(endOfShift.getMilliseconds() - 1);
+
+    return { startOfDay: startOfShift.toISOString(), endOfDay: endOfShift.toISOString() };
   };
 
   // Helper to get current month's date boundaries
@@ -109,10 +120,10 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
   // Calculate today's income from completed orders (actual food amount, excluding platform fee)
   const calculateTodayIncome = (ordersList: ShopOrder[]) => {
     const { startOfDay, endOfDay } = getTodayBoundaries();
-    const todayCompleted = ordersList.filter(order => 
-      order.status === 'completed' && 
+    const todayCompleted = ordersList.filter(order =>
+      order.status === 'completed' &&
       order.payment_status === 'paid' &&
-      order.created_at >= startOfDay && 
+      order.created_at >= startOfDay &&
       order.created_at <= endOfDay
     );
     return todayCompleted.reduce((sum, order) => sum + Number(order.total) - Number((order as any).platform_fee || 0), 0);
@@ -121,10 +132,10 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
   // Calculate monthly income from completed orders (actual food amount, excluding platform fee)
   const calculateMonthlyIncome = (ordersList: ShopOrder[]) => {
     const { startOfMonth, endOfMonth } = getMonthBoundaries();
-    const monthlyCompleted = ordersList.filter(order => 
-      order.status === 'completed' && 
+    const monthlyCompleted = ordersList.filter(order =>
+      order.status === 'completed' &&
       order.payment_status === 'paid' &&
-      order.created_at >= startOfMonth && 
+      order.created_at >= startOfMonth &&
       order.created_at <= endOfMonth
     );
     return monthlyCompleted.reduce((sum, order) => sum + Number(order.total) - Number((order as any).platform_fee || 0), 0);
@@ -148,7 +159,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
             .from('shop_order_items')
             .select('*')
             .eq('order_id', order.id);
-          
+
           return { ...order, items: items || [] };
         })
       );
@@ -184,7 +195,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
         },
         async (payload) => {
           console.log('Shop order realtime event:', payload.eventType, payload);
-          
+
           if (payload.eventType === 'INSERT') {
             const newOrder = payload.new as any;
             // Only add if payment is already paid
@@ -232,7 +243,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
             } else if (newOrder.payment_status === 'paid') {
               // Regular status update for paid order
               setOrders(prev => {
-                const updatedOrders = prev.map(order => 
+                const updatedOrders = prev.map(order =>
                   order.id === newOrder.id ? { ...order, ...newOrder } : order
                 );
                 setTodayIncome(calculateTodayIncome(updatedOrders));
@@ -262,11 +273,11 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
       (t) => {
         let startX = 0;
         let currentX = 0;
-        
+
         const handleTouchStart = (e: React.TouchEvent) => {
           startX = e.touches[0].clientX;
         };
-        
+
         const handleTouchMove = (e: React.TouchEvent) => {
           currentX = e.touches[0].clientX;
           const diff = currentX - startX;
@@ -275,7 +286,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
             (e.currentTarget as HTMLElement).style.opacity = `${Math.max(0, 1 - diff / 150)}`;
           }
         };
-        
+
         const handleTouchEnd = (e: React.TouchEvent) => {
           const diff = currentX - startX;
           if (diff > 80) {
@@ -285,11 +296,11 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
             (e.currentTarget as HTMLElement).style.opacity = '1';
           }
         };
-        
+
         return (
-          <div 
+          <div
             className="text-white px-3 py-2 rounded-lg shadow-lg border border-red-400/30 max-w-xs animate-in slide-in-from-top-5 duration-300 cursor-grab active:cursor-grabbing transition-opacity animate-pulse"
-            style={{ 
+            style={{
               background: 'linear-gradient(to right, #ff2121, #e01b1b)',
               animation: 'pulse 1.5s ease-in-out infinite, slide-in-from-top 0.3s ease-out'
             }}
@@ -318,7 +329,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
   const handleMarkReady = async (orderId: string) => {
     setUpdatingOrder(orderId);
     const order = orders.find(o => o.id === orderId);
-    
+
     try {
       const { error } = await supabase
         .from('shop_orders')
@@ -327,8 +338,8 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
 
       if (error) throw error;
 
-      setOrders(prev => 
-        prev.map(o => 
+      setOrders(prev =>
+        prev.map(o =>
           o.id === orderId ? { ...o, status: 'ready' } : o
         )
       );
@@ -378,7 +389,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
       if (error) throw error;
 
       setOrders(prev => {
-        const updatedOrders = prev.map(o => 
+        const updatedOrders = prev.map(o =>
           o.id === orderId ? { ...o, status: 'completed' } : o
         );
         setTodayIncome(calculateTodayIncome(updatedOrders));
@@ -431,8 +442,8 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
     if (result.success) {
       // Update local state to reflect the completed order
       setOrders(prev => {
-        const updatedOrders = prev.map(order => 
-          order.id === result.orderId 
+        const updatedOrders = prev.map(order =>
+          order.id === result.orderId
             ? { ...order, status: 'completed' }
             : order
         );
@@ -459,7 +470,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
     const now = new Date();
     const eta = new Date(order.estimated_ready_time);
     const minutesRemaining = Math.floor((eta.getTime() - now.getTime()) / 60000);
-    
+
     if (minutesRemaining <= 0) return 0; // Overdue - highest priority
     if (minutesRemaining <= 5) return 1; // Warning - medium priority
     return 2; // On-time - lower priority
@@ -471,7 +482,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
     const now = new Date();
     const eta = new Date(order.estimated_ready_time);
     const minutesRemaining = Math.ceil((eta.getTime() - now.getTime()) / 60000);
-    
+
     if (minutesRemaining <= 0) return 'overdue';
     if (minutesRemaining <= 5) return 'warning';
     return 'on-time';
@@ -526,7 +537,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
     if (!searchQuery.trim()) return tabOrders;
 
     const query = searchQuery.toLowerCase().trim();
-    return tabOrders.filter(order => 
+    return tabOrders.filter(order =>
       order.pickup_code.toLowerCase().includes(query) ||
       order.customer_name?.toLowerCase().includes(query) ||
       order.items?.some(item => item.name.toLowerCase().includes(query))
@@ -587,8 +598,8 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
                 return <StatusIcon className={cn("h-4 w-4", statusConfig[timeStatus].textColor)} />;
               })()}
               <span className={cn("text-sm font-semibold", statusConfig[timeStatus].textColor)}>
-                {timeStatus === 'overdue' 
-                  ? 'Overdue!' 
+                {timeStatus === 'overdue'
+                  ? 'Overdue!'
                   : `${minutesRemaining} min left`
                 }
               </span>
@@ -613,7 +624,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
               </h3>
               <p className="text-lg font-semibold text-accent">₹{(Number(order.total) - Number((order as any).platform_fee || 0)).toFixed(0)}</p>
             </div>
-            <Badge 
+            <Badge
               className={cn(
                 "text-white",
                 order.status === 'pending' && "bg-yellow-500",
@@ -653,7 +664,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
 
           {/* Customer Contact */}
           {order.customer_phone && (
-            <a 
+            <a
               href={`tel:${order.customer_phone}`}
               className="flex items-center gap-1.5 text-sm text-primary hover:underline"
             >
@@ -682,11 +693,11 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
 
           {/* Action Button */}
           {order.status === 'pending' && (
-            <Button 
+            <Button
               className={cn(
                 "w-full font-semibold py-3 rounded-lg",
-                timeStatus === 'overdue' 
-                  ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground" 
+                timeStatus === 'overdue'
+                  ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                   : "bg-primary hover:bg-primary/90 text-primary-foreground"
               )}
               onClick={() => handleMarkReady(order.id)}
@@ -752,16 +763,16 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
           <p className="text-sm text-muted-foreground mb-3">
             Scan customer's QR code or enter pickup code manually
           </p>
-          
+
           {/* QR Scan Button */}
-          <Button 
+          <Button
             onClick={() => setIsScannerOpen(true)}
             className="w-full mb-4 py-6 text-lg"
           >
             <QrCode className="h-6 w-6 mr-3" />
             Scan QR Code
           </Button>
-          
+
           {/* Manual Entry Divider */}
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
@@ -771,7 +782,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
               <span className="bg-card px-2 text-muted-foreground">or enter manually</span>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 flex justify-center">
               <InputOTP
@@ -789,7 +800,7 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
                 </InputOTPGroup>
               </InputOTP>
             </div>
-            <Button 
+            <Button
               onClick={handleCompleteByCode}
               disabled={pickupCode.length < 6}
               variant="outline"
