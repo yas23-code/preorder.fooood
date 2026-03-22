@@ -40,7 +40,7 @@ export default function CategoryItems() {
   const { addToCart, getItemCount, getCanteenItems } = useCart();
   const itemCount = canteenId ? getItemCount(canteenId) : 0;
   const cartItems = canteenId ? getCanteenItems(canteenId) : [];
-  
+
   // Real-time order limit status
   const { canAcceptOrders, activeOrderCount, isAtLimit, orderLimit, isLoading: orderStatusLoading } = useCanteenOrderStatus(canteenId);
 
@@ -63,7 +63,7 @@ export default function CategoryItems() {
         .select('*')
         .eq('id', canteenId)
         .maybeSingle();
-      
+
       setCanteen(canteenData);
 
       // Fetch menu items
@@ -72,7 +72,7 @@ export default function CategoryItems() {
         .select('*')
         .eq('canteen_id', canteenId)
         .order('name');
-      
+
       // Filter by category if not "all"
       if (decodedCategory !== 'all') {
         query = query.eq('category', decodedCategory);
@@ -100,7 +100,7 @@ export default function CategoryItems() {
       toast.error('This vendor is not accepting new orders right now');
       return;
     }
-    
+
     if (!item.is_available) {
       toast.error('This item is currently unavailable');
       return;
@@ -114,7 +114,7 @@ export default function CategoryItems() {
     } else {
       addToCart(item, canteenId!, canteen?.name || '');
     }
-    
+
     setAddedItems(prev => new Set(prev).add(item.id));
 
     // Reset the added state after animation
@@ -199,21 +199,21 @@ export default function CategoryItems() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-mcd-border bg-mcd-cream shadow-card">
         <div className="max-w-7xl mx-auto px-4 h-[72px] md:h-24 flex items-center">
-          <button 
-            onClick={() => navigate(`/student/canteen/${canteenId}`)} 
+          <button
+            onClick={() => navigate(`/student/canteen/${canteenId}`)}
             className="flex items-center gap-1 md:gap-2 text-foreground hover:text-mcd-red transition-colors text-sm md:text-base font-medium"
           >
             <ArrowLeft className="h-4 w-4 text-mcd-red" />
             <span className="hidden sm:inline">Back</span>
           </button>
-          
+
           <div className="flex-1 text-center px-2">
             <h1 className="text-base md:text-xl font-bold font-display truncate">{canteen.name}</h1>
             <p className="text-xs md:text-sm text-muted-foreground truncate">
               {decodedCategory === 'all' ? 'All Items' : decodedCategory}
             </p>
           </div>
-          
+
           <Link to="/student/cart" className="relative">
             <Button variant="outline" size="icon" className="h-9 w-9 md:h-10 md:w-10 bg-mcd-selected border-mcd-border hover:bg-mcd-yellow">
               <ShoppingCart className="h-4 w-4 md:h-5 md:w-5 text-mcd-red" />
@@ -226,13 +226,13 @@ export default function CategoryItems() {
           </Link>
         </div>
       </header>
-      
+
       <main className="max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-6">
         {/* Capacity Badge */}
         <div className="flex justify-end mb-4">
-          <OrderCapacityBadge 
-            activeOrderCount={activeOrderCount} 
-            orderLimit={orderLimit} 
+          <OrderCapacityBadge
+            activeOrderCount={activeOrderCount}
+            orderLimit={orderLimit}
             isLoading={orderStatusLoading}
           />
         </div>
@@ -246,7 +246,7 @@ export default function CategoryItems() {
                 {isAtLimit ? 'Order limit reached' : 'Not accepting orders'}
               </p>
               <p className="text-sm text-amber-700">
-                {isAtLimit 
+                {isAtLimit
                   ? `This vendor has reached their maximum of ${orderLimit} active orders. Please check back later.`
                   : 'This vendor is currently not accepting new orders. Please check back later.'
                 }
@@ -265,7 +265,7 @@ export default function CategoryItems() {
               className="w-full bg-white border-mcd-border rounded-full pl-4 pr-4 py-5 md:py-6 text-sm md:text-base"
             />
           </div>
-          <Button 
+          <Button
             className="bg-mcd-yellow hover:bg-yellow-400 text-foreground font-semibold px-4 md:px-6 rounded-full text-sm md:text-base"
           >
             Search
@@ -288,8 +288,8 @@ export default function CategoryItems() {
                   {/* Image */}
                   <div className="relative aspect-[2/1] w-full overflow-hidden rounded-xl">
                     {item.image_url ? (
-                      <img 
-                        src={item.image_url} 
+                      <img
+                        src={item.image_url}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />
@@ -311,7 +311,7 @@ export default function CategoryItems() {
                         <span className="text-xs font-medium">4.6</span>
                       </div>
                     </div>
-                    
+
                     {/* Size selector for shakes/juices */}
                     {isShakeItem(item.category) && item.is_available && (
                       <ShakeSizeSelector
@@ -320,23 +320,22 @@ export default function CategoryItems() {
                         compact
                       />
                     )}
-                    
+
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-mcd-border/50">
                       <p className="text-lg font-bold text-mcd-red">
                         ₹{getDisplayPrice(item).toFixed(0)}
                       </p>
-                      
+
                       <Button
                         onClick={() => handleAddToCart(item)}
                         disabled={!item.is_available || isAdded || !canAcceptOrders}
                         size="sm"
-                        className={`flex items-center gap-1.5 rounded-full px-4 h-9 font-semibold text-sm ${
-                          isAdded 
-                            ? 'bg-green-500 hover:bg-green-600 text-white' 
-                            : !canAcceptOrders
+                        className={`flex items-center gap-1.5 rounded-full px-4 h-9 font-semibold text-sm ${isAdded
+                          ? 'bg-green-500 hover:bg-green-600 text-white'
+                          : !canAcceptOrders
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-mcd-yellow hover:bg-yellow-400 text-foreground'
-                        }`}
+                          }`}
                       >
                         {isAdded ? (
                           <>
@@ -365,6 +364,23 @@ export default function CategoryItems() {
             title={searchQuery ? "No items found" : "No items in this category"}
             description={searchQuery ? "Try adjusting your search" : "Check back later for new items"}
           />
+        )}
+
+        {/* Floating Cart Button */}
+        {itemCount > 0 && (
+          <div className="fixed bottom-8 right-6 z-50 animate-in fade-in zoom-in-95">
+            <Link
+              to={`/student/cart/${canteenId}`}
+              className="flex items-center justify-center bg-mcd-red text-white h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-[0_8px_30px_rgb(200,0,0,0.3)] hover:bg-red-700 hover:scale-105 transition-all"
+            >
+              <div className="relative">
+                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
+                <span className="absolute -top-2 -right-2 h-5 w-5 bg-mcd-yellow text-mcd-text text-xs font-bold rounded-full flex items-center justify-center border-2 border-mcd-red shadow-sm">
+                  {itemCount}
+                </span>
+              </div>
+            </Link>
+          </div>
         )}
       </main>
     </div>

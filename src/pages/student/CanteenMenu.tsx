@@ -54,25 +54,25 @@ export default function CanteenMenu() {
   const { getItemCount, addToCart, getCanteenItems } = useCart();
   const itemCount = canteenId ? getItemCount(canteenId) : 0;
   const cartItems = canteenId ? getCanteenItems(canteenId) : [];
-  
+
   // Active order timer with real-time subscription
-  const { 
-    activeOrder, 
+  const {
+    activeOrder,
     orderStatus,
     estimatedReadyTime,
-    setActiveOrder, 
-    clearActiveOrder 
+    setActiveOrder,
+    clearActiveOrder
   } = useActiveOrderTimer(canteenId);
-  
+
   // Check for countdown data from payment success navigation
   useEffect(() => {
-    const state = location.state as { 
-      showCountdown?: boolean; 
-      pickupCode?: string; 
+    const state = location.state as {
+      showCountdown?: boolean;
+      pickupCode?: string;
       estimatedReadyTime?: string;
       orderId?: string;
     } | null;
-    
+
     if (state?.showCountdown && state?.pickupCode && state?.orderId && canteenId) {
       setActiveOrder({
         orderId: state.orderId,
@@ -84,7 +84,7 @@ export default function CanteenMenu() {
       window.history.replaceState({}, document.title);
     }
   }, [location.state, canteenId, setActiveOrder]);
-  
+
   // Real-time order limit status
   const { canAcceptOrders, activeOrderCount, orderLimit, isAtLimit, isLoading: orderStatusLoading } = useCanteenOrderStatus(canteenId);
 
@@ -121,7 +121,7 @@ export default function CanteenMenu() {
         .select('*')
         .eq('id', canteenId)
         .maybeSingle();
-      
+
       setCanteen(canteenData);
 
       // Fetch menu items
@@ -131,7 +131,7 @@ export default function CanteenMenu() {
         .eq('canteen_id', canteenId)
         .order('category')
         .order('name');
-      
+
       setMenuItems(itemsData || []);
 
       // Fetch categories
@@ -139,7 +139,7 @@ export default function CanteenMenu() {
         .from('categories')
         .select('*')
         .eq('canteen_id', canteenId);
-      
+
       setCategories(categoriesData || []);
       setIsLoading(false);
     };
@@ -151,9 +151,9 @@ export default function CanteenMenu() {
   const displayCategories = useMemo(() => {
     // Always include "All" category first
     const allCategory: Category = { id: 'all', name: 'All', image_url: canteen?.image_url || null };
-    
+
     let categoryList: Category[] = [];
-    
+
     if (categories.length > 0) {
       categoryList = categories;
     } else {
@@ -161,7 +161,7 @@ export default function CanteenMenu() {
       const uniqueCategories = [...new Set(menuItems.map(item => item.category))];
       categoryList = uniqueCategories.map(name => ({ id: name, name, image_url: null }));
     }
-    
+
     return [allCategory, ...categoryList];
   }, [categories, menuItems, canteen]);
 
@@ -169,7 +169,7 @@ export default function CanteenMenu() {
   const filteredCategories = useMemo(() => {
     if (!searchQuery) return displayCategories;
     const query = searchQuery.toLowerCase();
-    return displayCategories.filter(cat => 
+    return displayCategories.filter(cat =>
       cat.name.toLowerCase().includes(query)
     );
   }, [displayCategories, searchQuery]);
@@ -177,12 +177,12 @@ export default function CanteenMenu() {
   // Filter menu items based on selected category and search
   const filteredItems = useMemo(() => {
     let items = menuItems;
-    
+
     // Filter by category if not "all"
     if (selectedCategory !== 'all') {
       items = items.filter(item => item.category === selectedCategory);
     }
-    
+
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -191,7 +191,7 @@ export default function CanteenMenu() {
         (item.description?.toLowerCase().includes(query))
       );
     }
-    
+
     return items;
   }, [menuItems, selectedCategory, searchQuery]);
 
@@ -210,7 +210,7 @@ export default function CanteenMenu() {
       toast.error('This vendor is not accepting new orders right now');
       return;
     }
-    
+
     if (!item.is_available) {
       toast.error('This item is currently unavailable');
       return;
@@ -231,7 +231,7 @@ export default function CanteenMenu() {
     } else {
       addToCart(item, canteenId!, canteen?.name || '');
     }
-    
+
     setAddedItems(prev => new Set(prev).add(item.id));
 
     // Reset the added state after animation
@@ -290,19 +290,19 @@ export default function CanteenMenu() {
       <div className="min-h-screen bg-amber-50">
         <header className="sticky top-0 z-50 border-b border-amber-200 bg-amber-50">
           <div className="max-w-7xl mx-auto px-3 md:px-4 py-3 md:py-4 flex items-center">
-            <button 
-              onClick={() => navigate('/student/dashboard')} 
+            <button
+              onClick={() => navigate('/student/dashboard')}
               className="flex items-center gap-1 md:gap-2 text-foreground hover:text-primary transition-colors text-sm md:text-base"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back</span>
             </button>
-            
+
             <div className="flex-1 text-center px-2">
               <h1 className="text-base md:text-xl font-bold font-display truncate">{canteen.name}</h1>
               <p className="text-xs md:text-sm text-muted-foreground truncate">{canteen.location}</p>
             </div>
-            
+
             <div className="w-9 md:w-10" />
           </div>
         </header>
@@ -370,20 +370,20 @@ export default function CanteenMenu() {
       {/* Header - McDonald's Theme */}
       <header className="sticky top-0 z-50 border-b border-mcd-border bg-mcd-cream shadow-card w-full">
         <div className="px-4 h-[72px] md:h-24 flex items-center justify-between">
-          <button 
-            onClick={() => navigate('/student/dashboard')} 
+          <button
+            onClick={() => navigate('/student/dashboard')}
             className="flex items-center gap-1.5 text-foreground hover:text-mcd-red transition-colors text-sm font-medium"
           >
             <ArrowLeft className="h-4 w-4 text-mcd-red" />
             <span>Back</span>
           </button>
-          
+
           {/* Canteen name - centered */}
           <div className="flex-1 text-center px-2">
             <h1 className="text-lg md:text-xl font-bold font-display leading-tight">{canteen.name}</h1>
             <p className="text-xs text-muted-foreground leading-tight">{canteen.location}</p>
           </div>
-          
+
           <Link to={`/student/cart/${canteenId}`} className="relative flex-shrink-0">
             <Button variant="outline" size="icon" className="h-10 w-10 bg-mcd-selected border-mcd-border hover:bg-mcd-yellow">
               <ShoppingCart className="h-5 w-5 text-mcd-red" />
@@ -396,7 +396,7 @@ export default function CanteenMenu() {
           </Link>
         </div>
       </header>
-      
+
       <main className="px-4 py-4 w-full">
         {/* Order Status Warning Banner */}
         {!canAcceptOrders && (
@@ -407,7 +407,7 @@ export default function CanteenMenu() {
                 {isAtLimit ? 'Order limit reached' : 'Not accepting orders'}
               </p>
               <p className="text-sm text-amber-700">
-                {isAtLimit 
+                {isAtLimit
                   ? `This vendor has reached their maximum of ${orderLimit} active orders. Please check back later.`
                   : 'This vendor is currently not accepting new orders. Please check back later.'
                 }
@@ -419,9 +419,9 @@ export default function CanteenMenu() {
         {/* Title & Capacity */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-foreground">What are you craving?</h2>
-          <OrderCapacityBadge 
-            activeOrderCount={activeOrderCount} 
-            orderLimit={orderLimit} 
+          <OrderCapacityBadge
+            activeOrderCount={activeOrderCount}
+            orderLimit={orderLimit}
             isLoading={orderStatusLoading}
           />
         </div>
@@ -436,7 +436,7 @@ export default function CanteenMenu() {
               className="w-full bg-white border-mcd-border rounded-full pl-4 pr-4 h-11 text-sm"
             />
           </div>
-          <Button 
+          <Button
             className="bg-mcd-yellow hover:bg-yellow-400 text-foreground font-semibold px-5 rounded-full text-sm h-11"
           >
             Search
@@ -452,14 +452,13 @@ export default function CanteenMenu() {
                 onClick={() => handleCategoryClick(category)}
                 className="flex flex-col items-center gap-2 group"
               >
-                <div className={`w-20 h-20 rounded-full overflow-hidden border-3 transition-colors shadow-card ${
-                  (selectedCategory === 'all' && category.id === 'all') || selectedCategory === category.id
-                    ? 'border-mcd-yellow bg-mcd-selected' 
-                    : 'border-mcd-border group-hover:border-mcd-yellow'
-                }`}>
+                <div className={`w-20 h-20 rounded-full overflow-hidden border-3 transition-colors shadow-card ${(selectedCategory === 'all' && category.id === 'all') || selectedCategory === category.id
+                  ? 'border-mcd-yellow bg-mcd-selected'
+                  : 'border-mcd-border group-hover:border-mcd-yellow'
+                  }`}>
                   {category.image_url ? (
-                    <img 
-                      src={category.image_url} 
+                    <img
+                      src={category.image_url}
                       alt={category.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
@@ -469,11 +468,10 @@ export default function CanteenMenu() {
                     </div>
                   )}
                 </div>
-                <span className={`text-xs font-medium text-center transition-colors line-clamp-2 ${
-                  (selectedCategory === 'all' && category.id === 'all') || selectedCategory === category.id
-                    ? 'text-mcd-red font-semibold'
-                    : 'text-foreground group-hover:text-mcd-red'
-                }`}>
+                <span className={`text-xs font-medium text-center transition-colors line-clamp-2 ${(selectedCategory === 'all' && category.id === 'all') || selectedCategory === category.id
+                  ? 'text-mcd-red font-semibold'
+                  : 'text-foreground group-hover:text-mcd-red'
+                  }`}>
                   {category.name}
                 </span>
               </button>
@@ -502,8 +500,8 @@ export default function CanteenMenu() {
                         {/* Image */}
                         <div className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden">
                           {item.image_url ? (
-                            <img 
-                              src={item.image_url} 
+                            <img
+                              src={item.image_url}
                               alt={item.name}
                               className="w-full h-full object-cover"
                             />
@@ -538,7 +536,7 @@ export default function CanteenMenu() {
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Size selector for shakes/juices */}
                           {isShakeItem(item.category) && isItemAvailable && (
                             <ShakeSizeSelector
@@ -547,24 +545,23 @@ export default function CanteenMenu() {
                               compact
                             />
                           )}
-                          
+
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-mcd-border/50">
                             <p className="text-lg font-bold text-mcd-red">
                               ₹{getDisplayPrice(item).toFixed(0)}
                             </p>
-                            
+
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleAddToCart(item)}
                               disabled={!isItemAvailable || isAdded || !canAcceptOrders}
-                              className={`flex items-center gap-1.5 text-sm h-9 px-4 rounded-full font-semibold ${
-                                isAdded 
-                                  ? 'bg-green-100 border-green-500 text-green-600' 
-                                  : !canAcceptOrders || !isItemAvailable
+                              className={`flex items-center gap-1.5 text-sm h-9 px-4 rounded-full font-semibold ${isAdded
+                                ? 'bg-green-100 border-green-500 text-green-600'
+                                : !canAcceptOrders || !isItemAvailable
                                   ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
                                   : 'bg-mcd-yellow hover:bg-yellow-400 border-mcd-yellow text-foreground'
-                              }`}
+                                }`}
                             >
                               {isAdded ? (
                                 <>
@@ -599,7 +596,7 @@ export default function CanteenMenu() {
             )}
           </>
         )}
-        
+
         {/* Active Order Bottom Bar - persists until order is completed */}
         {activeOrder && (
           <ActiveOrderBottomBar
@@ -609,6 +606,23 @@ export default function CanteenMenu() {
             orderStatus={orderStatus}
             onOrderCompleted={clearActiveOrder}
           />
+        )}
+
+        {/* Floating Cart Button */}
+        {itemCount > 0 && (
+          <div className={`fixed right-6 z-50 transition-all duration-300 animate-in fade-in zoom-in-95 ${activeOrder ? 'bottom-28' : 'bottom-8'}`}>
+            <Link
+              to={`/student/cart/${canteenId}`}
+              className="flex items-center justify-center bg-mcd-red text-white h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-[0_8px_30px_rgb(200,0,0,0.3)] hover:bg-red-700 hover:scale-105 transition-all"
+            >
+              <div className="relative">
+                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
+                <span className="absolute -top-2 -right-2 h-5 w-5 bg-mcd-yellow text-mcd-text text-xs font-bold rounded-full flex items-center justify-center border-2 border-mcd-red shadow-sm">
+                  {itemCount}
+                </span>
+              </div>
+            </Link>
+          </div>
         )}
       </main>
     </div>

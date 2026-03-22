@@ -69,7 +69,9 @@ export default function Cart() {
   const { user, profile, checkBanStatus } = useAuth();
   const { canAcceptOrders, isAtLimit, orderLimit } = useCanteenOrderStatus(canteenId);
   const [isOrdering, setIsOrdering] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(() => {
+    return localStorage.getItem('lastUsedPhone') || '';
+  });
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
@@ -379,6 +381,9 @@ export default function Cart() {
       toast.error('Payment gateway is loading. Please try again.');
       return;
     }
+
+    // Save the valid phone number directly to local storage for future reuse
+    localStorage.setItem('lastUsedPhone', phoneNumber);
 
     setIsOrdering(true);
 
