@@ -45,7 +45,7 @@ interface UseCollegeLocationReturn {
 }
 
 export function useCollegeLocation(): UseCollegeLocationReturn {
-  const { latitude, longitude, error: locationError, loading: locationLoading, permissionDenied } = useGeolocation();
+  const { latitude, longitude, error: locationError, loading: locationLoading, permissionDenied, requestLocation } = useGeolocation(false);
   const [collegeConfig, setCollegeConfig] = useState<CollegeConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [testForceLocation, setTestForceLocation] = useState<ForceLocation>(FORCE_LOCATION);
@@ -69,7 +69,6 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
       const { data, error } = await supabase
         .from('college_config')
         .select('*')
-        .eq('is_active', true)
         .limit(1)
         .maybeSingle();
 
@@ -77,13 +76,16 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
         console.error('Error fetching college config:', error);
       } else if (data) {
         setCollegeConfig(data);
+        if (data.is_active) {
+          requestLocation();
+        }
       }
       // If no config exists, collegeConfig remains null - user is treated as outside campus
       setConfigLoading(false);
     }
 
     fetchCollegeConfig();
-  }, []);
+  }, [requestLocation]);
 
   // Calculate distance and determine if user is inside campus
   const { isInsideCampus, distanceToCollege } = useMemo(() => {

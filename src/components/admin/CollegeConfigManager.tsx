@@ -352,6 +352,17 @@ export function CollegeConfigManager() {
           </p>
         </div>
 
+        {/* Require Location Detection Toggle */}
+        <div className="flex items-center justify-between py-2 border-b border-mcd-border">
+          <div className="space-y-0.5">
+            <Label>Require Location Detection</Label>
+            <p className="text-xs text-muted-foreground">
+              When disabled, students will bypass location checks and directly access college canteens from anywhere.
+            </p>
+          </div>
+          <Switch checked={isActive} onCheckedChange={setIsActive} />
+        </div>
+
         {/* Show Nearby Shops Toggle */}
         <div className="flex items-center justify-between py-2 border-b border-mcd-border">
           <div className="space-y-0.5">

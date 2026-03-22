@@ -13,12 +13,12 @@ interface UseGeolocationReturn extends GeolocationState {
   retry: () => void;
 }
 
-export function useGeolocation(): UseGeolocationReturn {
+export function useGeolocation(autoStart: boolean = true): UseGeolocationReturn {
   const [state, setState] = useState<GeolocationState>({
     latitude: null,
     longitude: null,
     error: null,
-    loading: true,
+    loading: autoStart,
     permissionDenied: false,
   });
 
@@ -90,8 +90,10 @@ export function useGeolocation(): UseGeolocationReturn {
   }, [requestPosition]);
 
   useEffect(() => {
-    getLocation();
-  }, [getLocation]);
+    if (autoStart) {
+      getLocation();
+    }
+  }, [getLocation, autoStart]);
 
   return {
     ...state,
