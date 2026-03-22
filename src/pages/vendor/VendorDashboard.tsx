@@ -40,6 +40,7 @@ interface Order {
   updated_at: string;
   estimated_ready_time?: string;
   order_no?: number | null;
+  order_type?: 'dine_in' | 'takeaway';
   items?: OrderItem[];
 }
 

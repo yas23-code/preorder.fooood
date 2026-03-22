@@ -23,10 +23,10 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
   const { playOverdueSound } = useNotificationSound();
   const hasPlayedOverdueSound = useRef(false);
   const previousStatus = useRef<TimeStatus | null>(null);
-  
+
   const orderDate = order.created_at ? new Date(order.created_at) : null;
   const estimatedReadyTime = order.estimated_ready_time ? new Date(order.estimated_ready_time) : null;
-  
+
   // Calculate remaining seconds for ETA (matching student dashboard calculation)
   const getSecondsRemaining = () => {
     if (!estimatedReadyTime) return null;
@@ -35,15 +35,15 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
     const diffSeconds = Math.max(0, Math.floor((targetTime - now) / 1000));
     return diffSeconds;
   };
-  
+
   // Convert seconds to minutes (matching student dashboard calculation)
   const getMinutesRemaining = (seconds: number): number => {
     return Math.ceil(seconds / 60);
   };
-  
+
   const secondsRemaining = getSecondsRemaining();
   const minutesRemaining = secondsRemaining !== null ? getMinutesRemaining(secondsRemaining) : null;
-  
+
   // Determine time status: green (>5 min), yellow (1-5 min), red (<=0 min)
   // Only show timer for 'accepted' orders, not 'pending'
   const getTimeStatus = (): TimeStatus | null => {
@@ -52,14 +52,14 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
     if (minutesRemaining <= 5) return 'warning';
     return 'on-time';
   };
-  
+
   const timeStatus = getTimeStatus();
-  
+
   // Play overdue sound when order transitions to overdue status
   useEffect(() => {
     if (
-      timeStatus === 'overdue' && 
-      previousStatus.current !== 'overdue' && 
+      timeStatus === 'overdue' &&
+      previousStatus.current !== 'overdue' &&
       !hasPlayedOverdueSound.current &&
       order.status === 'accepted'
     ) {
@@ -73,18 +73,18 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
     }
     previousStatus.current = timeStatus;
   }, [timeStatus, order.id, order.status, playOverdueSound]);
-  
+
   // Auto-refresh every 30 seconds to update time status (only for accepted orders)
   useEffect(() => {
     if (order.status !== 'accepted' || !order.estimated_ready_time) return;
-    
+
     const interval = setInterval(() => {
       setTick(t => t + 1);
-   }, 1000); // Update every second to match student dashboard timer
-    
+    }, 1000); // Update every second to match student dashboard timer
+
     return () => clearInterval(interval);
   }, [order.status, order.estimated_ready_time]);
-  
+
   const statusConfig = {
     'on-time': {
       bgColor: 'bg-green-500/10',
@@ -129,7 +129,7 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
           </span>
         </div>
       )}
-      
+
       {/* Customer Name & Total (show actual food amount, excluding platform fee) */}
       <div className="flex items-start justify-between mb-2">
         <div>
@@ -139,9 +139,21 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
           <p className="text-muted-foreground">₹{(Number(order.total) - Number((order as any).platform_fee || 0)).toFixed(0)}</p>
         </div>
         {order.order_no && (
-          <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-            <span className="text-xs font-medium">ORDER</span>
-            <span className="text-lg font-bold">#{order.order_no}</span>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+              <span className="text-xs font-medium">ORDER</span>
+              <span className="text-lg font-bold">#{order.order_no}</span>
+            </div>
+            {order.order_type && (
+              <div className={cn(
+                "px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider",
+                order.order_type === 'takeaway'
+                  ? "bg-amber-100 text-amber-700 border border-amber-200"
+                  : "bg-blue-100 text-blue-700 border border-blue-200"
+              )}>
+                {order.order_type === 'takeaway' ? '🛍️ Takeaway' : '🍽️ Dine In'}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -153,7 +165,7 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
           <span>{format(orderDate, 'dd MMM yyyy, hh:mm a')}</span>
         </div>
       )}
-      
+
       {/* Estimated Ready Time / Prep Time - only for accepted orders */}
       {order.status === 'accepted' && estimatedReadyTime && (
         <div className="flex items-center gap-1.5 text-sm mb-4">
@@ -163,14 +175,14 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
           </span>
         </div>
       )}
-      
+
       {(order.status === 'ready' || order.status === 'completed') && estimatedReadyTime && (
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
           <Timer className="h-4 w-4" />
           <span>ETA was: {format(estimatedReadyTime, 'hh:mm a')}</span>
         </div>
       )}
-      
+
       {/* Order Items */}
       <div className="space-y-1 mb-4">
         {order.items?.map(item => (
@@ -180,18 +192,18 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
           </p>
         ))}
       </div>
-      
+
       {/* Accept/Reject Buttons for new pending orders */}
       {order.status === 'pending' && showAcceptReject && onAcceptOrder && onRejectOrder && (
         <div className="flex gap-2 mb-3">
-          <Button 
+          <Button
             className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg"
             onClick={() => onAcceptOrder(order.id)}
           >
             <Check className="h-4 w-4 mr-1" />
             Accept
           </Button>
-          <Button 
+          <Button
             variant="outline"
             className="flex-1 border-red-300 text-red-600 hover:bg-red-50 font-semibold py-3 rounded-lg"
             onClick={() => onRejectOrder(order.id)}
@@ -204,11 +216,11 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
 
       {/* Action Button - Mark Ready (only for accepted orders, not pending) */}
       {order.status === 'accepted' && onMarkReady && (
-        <Button 
+        <Button
           className={cn(
             "w-full font-semibold py-3 rounded-lg",
-            timeStatus === 'overdue' 
-              ? "bg-red-500 hover:bg-red-600 text-white" 
+            timeStatus === 'overdue'
+              ? "bg-red-500 hover:bg-red-600 text-white"
               : "bg-primary hover:bg-primary/90 text-primary-foreground"
           )}
           onClick={() => onMarkReady(order.id)}
@@ -216,7 +228,7 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
           {timeStatus === 'overdue' ? 'Mark Ready (Overdue!)' : 'Mark Ready'}
         </Button>
       )}
-      
+
       {order.status === 'ready' && (
         <div className="bg-accent/10 rounded-lg p-3 text-center">
           <p className="text-sm text-muted-foreground">Waiting for pickup</p>

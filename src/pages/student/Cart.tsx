@@ -81,6 +81,7 @@ export default function Cart() {
   const [membershipDiscountStartTime, setMembershipDiscountStartTime] = useState<string | null>(null);
   const { isEligibleForDiscount } = useMembership();
   const [paymentMethod, setPaymentMethod] = useState<'cashfree' | 'wallet'>('cashfree');
+  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const { enableWallet } = useCollegeLocation();
   const navigate = useNavigate();
@@ -447,7 +448,8 @@ export default function Cart() {
           payment_status: 'pending',
           estimated_ready_time: etaData || null,
           order_no: orderNo || 1,
-        })
+          order_type: orderType,
+        } as any)
         .select()
         .single();
 
@@ -766,10 +768,9 @@ export default function Cart() {
             <FeeBreakdownCard fees={fees} discount={totalDiscount} membershipDiscount={membershipDiscountAmount} />
           </div>
 
-          {/* Phone Number Input */}
           <div className="mt-4 mb-4">
-            <Label htmlFor="phone" className="text-sm font-medium text-foreground">
-              Phone Number (for payment)
+            <Label htmlFor="phone" className="text-sm font-bold text-mcd-red flex items-center gap-1.5 mb-1">
+              Phone Number (Required)
             </Label>
             <Input
               id="phone"
@@ -777,9 +778,32 @@ export default function Cart() {
               placeholder="Enter your 10-digit phone number"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              className="mt-1 border-mcd-border"
+              className="mt-1 border-mcd-red bg-mcd-red/5 placeholder:text-mcd-red/50 font-medium focus-visible:ring-mcd-red"
               maxLength={10}
             />
+          </div>
+
+          <div className="py-2.5 border-t border-mcd-border">
+            <Label className="text-xs font-bold text-foreground mb-2 block">Order Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setOrderType('dine_in')}
+                className={`flex items-center justify-center gap-2 p-2 rounded-lg border-2 transition-all ${orderType === 'dine_in' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'}`}
+              >
+                <span className="text-sm">🍽️</span>
+                <span className={`text-xs font-bold ${orderType === 'dine_in' ? 'text-mcd-red' : 'text-muted-foreground'}`}>Dine In</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOrderType('takeaway')}
+                className={`flex items-center justify-center gap-2 p-2 rounded-lg border-2 transition-all ${orderType === 'takeaway' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'}`}
+              >
+                <span className="text-sm">🛍️</span>
+                <span className={`text-xs font-bold ${orderType === 'takeaway' ? 'text-mcd-red' : 'text-muted-foreground'}`}>Pack</span>
+              </button>
+            </div>
           </div>
 
           {/* Payment Method Selection */}

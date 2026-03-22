@@ -60,6 +60,7 @@ export interface Order {
   qr_token?: string | null;
   qr_used?: boolean;
   order_no?: number | null;
+  order_type?: 'dine_in' | 'takeaway';
   created_at: string;
   updated_at: string;
   canteen?: Canteen;
