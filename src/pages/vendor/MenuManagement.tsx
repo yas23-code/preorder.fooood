@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Plus, Pencil, Trash2, UtensilsCrossed, Upload, X } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, UtensilsCrossed, Upload, X, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -51,6 +51,8 @@ export default function MenuManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state for adding new items
   const [formName, setFormName] = useState('');
@@ -86,7 +88,7 @@ export default function MenuManagement() {
         .select('id')
         .eq('vendor_id', user.id)
         .maybeSingle();
-      
+
       if (!canteen) {
         setIsLoading(false);
         return;
@@ -100,14 +102,14 @@ export default function MenuManagement() {
         .eq('canteen_id', canteen.id)
         .order('category')
         .order('name');
-      
+
       setItems(itemsData || []);
 
       const { data: categoriesData } = await supabase
         .from('categories')
         .select('*')
         .eq('canteen_id', canteen.id);
-      
+
       setCategories(categoriesData || []);
       setIsLoading(false);
     };
@@ -242,7 +244,7 @@ export default function MenuManagement() {
     try {
       // Check if category exists, if not create it (case-insensitive check with trim)
       const existingCategory = categories.find(c => c.name.toLowerCase().trim() === trimmedCategory.toLowerCase());
-      
+
       if (!existingCategory) {
         // Create new category with trimmed name
         const { data: newCategory, error: categoryError } = await supabase
@@ -250,7 +252,7 @@ export default function MenuManagement() {
           .insert({ canteen_id: canteenId, name: trimmedCategory })
           .select()
           .single();
-        
+
         if (categoryError) throw categoryError;
 
         let categoryImageUrl: string | null = null;
@@ -258,12 +260,12 @@ export default function MenuManagement() {
         // Upload category image if provided
         if (formCategoryImage && newCategory) {
           categoryImageUrl = await uploadCategoryImage(formCategoryImage, newCategory.id);
-          
+
           const { error: catUpdateError } = await supabase
             .from('categories')
             .update({ image_url: categoryImageUrl })
             .eq('id', newCategory.id);
-          
+
           if (catUpdateError) throw catUpdateError;
         }
 
@@ -271,15 +273,15 @@ export default function MenuManagement() {
       } else if (formCategoryImage) {
         // Update existing category with new image
         const categoryImageUrl = await uploadCategoryImage(formCategoryImage, existingCategory.id);
-        
+
         const { error: catUpdateError } = await supabase
           .from('categories')
           .update({ image_url: categoryImageUrl })
           .eq('id', existingCategory.id);
-        
+
         if (catUpdateError) throw catUpdateError;
-        
-        setCategories(prev => prev.map(c => 
+
+        setCategories(prev => prev.map(c =>
           c.id === existingCategory.id ? { ...c, image_url: categoryImageUrl } : c
         ));
       }
@@ -298,7 +300,7 @@ export default function MenuManagement() {
         })
         .select()
         .single();
-      
+
       if (error) throw error;
 
       let imageUrl: string | null = null;
@@ -306,15 +308,15 @@ export default function MenuManagement() {
       // If there's an image, upload it and update the item
       if (formImage && data) {
         imageUrl = await uploadImage(formImage, data.id);
-        
+
         const { error: updateError } = await supabase
           .from('menu_items')
           .update({ image_url: imageUrl })
           .eq('id', data.id);
-        
+
         if (updateError) throw updateError;
       }
-      
+
       setItems(prev => [...prev, { ...data, image_url: imageUrl }]);
       toast.success('Item added successfully');
       resetAddForm();
@@ -370,22 +372,22 @@ export default function MenuManagement() {
           image_url: imageUrl,
         })
         .eq('id', editingItem.id);
-      
+
       if (error) throw error;
-      
+
       setItems(prev =>
         prev.map(item =>
           item.id === editingItem.id
             ? {
-                ...item,
-                name: editName.trim(),
-                description: editDescription?.trim() || null,
-                price: parseFloat(editPrice),
-                category: trimmedCategory,
-                prep_time: editPrepTime ? parseInt(editPrepTime) : null,
-                is_available: editAvailable,
-                image_url: imageUrl,
-              }
+              ...item,
+              name: editName.trim(),
+              description: editDescription?.trim() || null,
+              price: parseFloat(editPrice),
+              category: trimmedCategory,
+              prep_time: editPrepTime ? parseInt(editPrepTime) : null,
+              is_available: editAvailable,
+              image_url: imageUrl,
+            }
             : item
         )
       );
@@ -407,9 +409,9 @@ export default function MenuManagement() {
         .from('menu_items')
         .delete()
         .eq('id', itemId);
-      
+
       if (error) throw error;
-      
+
       setItems(prev => prev.filter(item => item.id !== itemId));
       toast.success('Item deleted');
     } catch (error) {
@@ -420,9 +422,9 @@ export default function MenuManagement() {
 
   const addDefaultCategories = async () => {
     if (!canteenId) return;
-    
+
     const defaultCategories = ['Breakfast', 'Lunch', 'Snacks', 'Beverages', 'Desserts'];
-    
+
     try {
       for (const name of defaultCategories) {
         const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase());
@@ -432,7 +434,7 @@ export default function MenuManagement() {
             .insert({ canteen_id: canteenId, name })
             .select()
             .single();
-          
+
           if (!error && data) {
             setCategories(prev => [...prev, data]);
           }
@@ -464,9 +466,9 @@ export default function MenuManagement() {
         .from('categories')
         .delete()
         .eq('id', categoryToDelete.id);
-      
+
       if (error) throw error;
-      
+
       setCategories(prev => prev.filter(c => c.id !== categoryToDelete.id));
       toast.success(`Category "${categoryName}" deleted`);
     } catch (error) {
@@ -478,7 +480,7 @@ export default function MenuManagement() {
   // Get unique categories with counts (case-insensitive to avoid duplicates)
   const categoryWithCounts = (() => {
     const categoryMap = new Map<string, { name: string; count: number }>();
-    
+
     // Add categories from the categories table first
     categories.forEach(c => {
       const key = c.name.toLowerCase().trim();
@@ -486,7 +488,7 @@ export default function MenuManagement() {
         categoryMap.set(key, { name: c.name, count: 0 });
       }
     });
-    
+
     // Count items per category (case-insensitive matching)
     items.forEach(item => {
       const key = item.category.toLowerCase().trim();
@@ -497,9 +499,16 @@ export default function MenuManagement() {
         categoryMap.set(key, { name: item.category, count: 1 });
       }
     });
-    
+
     return Array.from(categoryMap.values());
   })();
+
+  const filteredItems = items.filter(item => {
+    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
 
   if (isLoading) {
     return (
@@ -558,14 +567,14 @@ export default function MenuManagement() {
           <div className="w-32" />
         </div>
       </div>
-      
+
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Side - Add Menu Item Form */}
           <div className="bg-white border border-mcd-border rounded-xl p-6 h-fit shadow-card">
             <h2 className="text-xl font-bold text-mcd-text mb-1">Add Menu Item</h2>
             <p className="text-sm text-mcd-text/70 mb-6">Add a new item to your menu</p>
-            
+
             <div className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="item-name" className="text-mcd-text font-medium">Item Name</Label>
@@ -577,7 +586,7 @@ export default function MenuManagement() {
                   className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="item-category" className="text-mcd-text font-medium">Category</Label>
                 <div className="flex gap-2">
@@ -630,7 +639,7 @@ export default function MenuManagement() {
                   </label>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="item-description" className="text-mcd-text font-medium">Description</Label>
                 <Textarea
@@ -642,7 +651,7 @@ export default function MenuManagement() {
                   className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow resize-none"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="item-price" className="text-mcd-text font-medium">Price (₹)</Label>
@@ -656,7 +665,7 @@ export default function MenuManagement() {
                     className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="item-prep-time" className="text-mcd-text font-medium">Prep Time (mins)</Label>
                   <Input
@@ -708,7 +717,7 @@ export default function MenuManagement() {
                   </label>
                 )}
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <Label htmlFor="item-available" className="text-mcd-text font-medium">Available</Label>
                 <Switch
@@ -717,10 +726,10 @@ export default function MenuManagement() {
                   onCheckedChange={setFormAvailable}
                 />
               </div>
-              
-              <Button 
-                className="w-full bg-mcd-yellow hover:bg-mcd-yellow/90 text-mcd-text font-bold" 
-                onClick={handleAddItem} 
+
+              <Button
+                className="w-full bg-mcd-yellow hover:bg-mcd-yellow/90 text-mcd-text font-bold"
+                onClick={handleAddItem}
                 disabled={isSaving}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -728,20 +737,27 @@ export default function MenuManagement() {
               </Button>
             </div>
           </div>
-          
+
           {/* Right Side - Categories and Menu Items */}
           <div className="space-y-6">
             {/* Categories Section */}
             <div className="bg-white border border-mcd-border rounded-xl p-6 shadow-card">
               <h2 className="text-xl font-bold text-mcd-text mb-1">Categories</h2>
               <p className="text-sm text-mcd-text/70 mb-4">Your current categories</p>
-              
+
               <div className="flex flex-wrap gap-2">
+                <Badge
+                  onClick={() => setSelectedCategory('All')}
+                  className={`px-3 py-1 text-sm cursor-pointer ${selectedCategory === 'All' ? 'bg-mcd-yellow text-mcd-text hover:bg-mcd-yellow/90' : 'bg-mcd-red hover:bg-mcd-red/90 text-white'}`}
+                >
+                  All Items
+                </Badge>
                 {categoryWithCounts.length > 0 ? (
                   categoryWithCounts.map(cat => (
                     <div key={cat.name} className="flex items-center gap-1">
-                      <Badge 
-                        className="bg-mcd-red hover:bg-mcd-red/90 text-white px-3 py-1 text-sm"
+                      <Badge
+                        onClick={() => setSelectedCategory(cat.name)}
+                        className={`px-3 py-1 text-sm cursor-pointer ${selectedCategory === cat.name ? 'bg-mcd-yellow text-mcd-text hover:bg-mcd-yellow/90' : 'bg-mcd-red hover:bg-mcd-red/90 text-white'}`}
                       >
                         {cat.name} {cat.count > 0 && `(${cat.count})`}
                       </Badge>
@@ -759,14 +775,28 @@ export default function MenuManagement() {
                 )}
               </div>
             </div>
-            
+
             {/* Current Menu Items Section */}
             <div className="bg-card border border-amber-200 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">Current Menu Items</h2>
-              
-              {items.length > 0 ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h2 className="text-xl font-bold text-foreground">
+                  {selectedCategory === 'All' ? 'All Menu Items' : `${selectedCategory} Items`}
+                </h2>
+
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search menu items..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 bg-background border-amber-300 focus-visible:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              {filteredItems.length > 0 ? (
                 <div className="space-y-4">
-                  {items.map(item => (
+                  {filteredItems.map(item => (
                     <div key={item.id} className="bg-card border border-amber-200 rounded-xl overflow-hidden">
                       <div className="p-4 flex items-start justify-between">
                         <div>
@@ -774,13 +804,13 @@ export default function MenuManagement() {
                           <p className="text-muted-foreground">₹{item.price.toFixed(2)}</p>
                         </div>
                         <div className="flex gap-2">
-                          <button 
+                          <button
                             onClick={() => openEditDialog(item)}
                             className="p-2 hover:bg-amber-100 rounded-lg transition-colors"
                           >
                             <Pencil className="h-4 w-4 text-muted-foreground" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(item.id)}
                             className="p-2 hover:bg-red-100 rounded-lg transition-colors"
                           >
@@ -788,7 +818,7 @@ export default function MenuManagement() {
                           </button>
                         </div>
                       </div>
-                      
+
                       {item.image_url && (
                         <div className="px-4 pb-4">
                           <img
@@ -798,7 +828,7 @@ export default function MenuManagement() {
                           />
                         </div>
                       )}
-                      
+
                       <div className="px-4 pb-4 space-y-1">
                         <p className="text-sm">
                           <span className="text-muted-foreground">Status: </span>
@@ -833,7 +863,7 @@ export default function MenuManagement() {
             <DialogTitle className="text-mcd-text">Edit Menu Item</DialogTitle>
             <DialogDescription className="text-mcd-text/70">Update the item details below</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-name" className="text-mcd-text font-medium">Name *</Label>
@@ -844,7 +874,7 @@ export default function MenuManagement() {
                 className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-description" className="text-mcd-text font-medium">Description</Label>
               <Textarea
@@ -855,7 +885,7 @@ export default function MenuManagement() {
                 className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-price" className="text-mcd-text font-medium">Price (₹) *</Label>
@@ -868,7 +898,7 @@ export default function MenuManagement() {
                   className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-category" className="text-mcd-text font-medium">Category *</Label>
                 <Input
@@ -930,7 +960,7 @@ export default function MenuManagement() {
                 </label>
               )}
             </div>
-            
+
             <div className="flex items-center justify-between">
               <Label htmlFor="edit-available" className="text-mcd-text font-medium">Available for order</Label>
               <Switch
@@ -940,7 +970,7 @@ export default function MenuManagement() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-mcd-border text-mcd-text hover:bg-mcd-selected">
               Cancel
