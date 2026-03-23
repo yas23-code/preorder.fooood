@@ -110,21 +110,35 @@ export default defineConfig(({ mode }) => ({
             purpose: "maskable",
           },
         ],
-        categories: ["food", "lifestyle", "utilities"],
+        categories: ["food", "lifestyle", "shopping", "utilities", "business"],
+        related_applications: [
+          {
+            platform: "play",
+            url: "https://play.google.com/store/apps/details?id=food.preorder.twa",
+            id: "food.preorder.twa"
+          }
+        ],
         screenshots: [
           {
             src: "screenshots/screenshot-mobile.png",
             sizes: "540x960",
             type: "image/png",
             form_factor: "narrow",
-            label: "Browse and order food from your campus canteen",
+            label: "Explore all your campus canteens in one place",
+          },
+          {
+            src: "screenshots/screenshot-cart.png",
+            sizes: "540x960",
+            type: "image/png",
+            form_factor: "narrow",
+            label: "Easily manage your cart and proceed to checkout",
           },
           {
             src: "screenshots/screenshot-desktop.png",
             sizes: "1280x720",
             type: "image/png",
             form_factor: "wide",
-            label: "preorder.food desktop dashboard",
+            label: "The preorder.food desktop experience",
           },
         ],
         shortcuts: [
@@ -133,14 +147,14 @@ export default defineConfig(({ mode }) => ({
             short_name: "Order",
             description: "Browse canteens and place an order",
             url: "/student",
-            icons: [{ src: "icons/icon-96x96.png", sizes: "96x96", type: "image/png" }],
+            icons: [{ src: "icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
           },
           {
             name: "My Orders",
             short_name: "Orders",
             description: "View your active and past orders",
             url: "/student/orders",
-            icons: [{ src: "icons/icon-96x96.png", sizes: "96x96", type: "image/png" }],
+            icons: [{ src: "icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
           },
         ],
       },
