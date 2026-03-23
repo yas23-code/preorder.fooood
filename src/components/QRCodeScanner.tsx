@@ -23,6 +23,7 @@ export function QRCodeScanner({
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [cameraError, setCameraError] = useState<string>('');
+  const [isCameraStarting, setIsCameraStarting] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
@@ -31,6 +32,7 @@ export function QRCodeScanner({
     if (!containerRef.current || !isOpen) return;
 
     setCameraError('');
+    setIsCameraStarting(true);
     
     try {
       // Permission is already granted before dialog opens (requested in parent component)
@@ -127,8 +129,11 @@ export function QRCodeScanner({
           throw envError;
         }
       }
+      // Camera started successfully
+      setIsCameraStarting(false);
     } catch (err: any) {
       console.error('Final Camera Error:', err);
+      setIsCameraStarting(false);
       const errorName = err.name || '';
       const errorMessage = err.message || '';
       
@@ -150,11 +155,12 @@ export function QRCodeScanner({
       setErrorMessage('');
       setSuccessMessage('');
       setCameraError('');
+      setIsCameraStarting(true);
       isProcessingRef.current = false;
       
       const timer = setTimeout(() => {
         startScannerImplementation();
-      }, 800);
+      }, 150);
       
       return () => clearTimeout(timer);
     } else {
@@ -198,11 +204,20 @@ export function QRCodeScanner({
               <div 
                 id="qr-reader" 
                 ref={containerRef}
-                className="w-full bg-black/5"
+                className="w-full bg-black"
                 style={{ minHeight: '300px' }}
               />
               
-              {/* Scanning overlay */}
+              {/* Loading spinner while camera starts */}
+              {isCameraStarting && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-40">
+                  <Loader2 className="h-10 w-10 text-primary animate-spin mb-3" />
+                  <p className="text-white text-sm font-medium">Starting camera...</p>
+                </div>
+              )}
+
+              {/* Scanning overlay - only show when camera is active */}
+              {!isCameraStarting && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div className="w-60 h-60 border-2 border-primary rounded-lg relative">
                   <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
@@ -214,6 +229,7 @@ export function QRCodeScanner({
                   <div className="absolute inset-x-0 h-0.5 bg-primary animate-scan opacity-60" />
                 </div>
               </div>
+              )}
               
               {cameraError && (
                 <div className="absolute inset-0 bg-background/95 flex flex-col items-center justify-center p-6 text-center z-50">
