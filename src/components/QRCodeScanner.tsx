@@ -27,84 +27,85 @@ export function QRCodeScanner({
   const containerRef = useRef<HTMLDivElement>(null);
   const isProcessingRef = useRef(false);
 
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try {
-        const state = scannerRef.current.getState();
-        if (state === 2) { // SCANNING state
-          await scannerRef.current.stop();
-        }
-      } catch (err) {
-        console.log('Scanner stop error (non-critical):', err);
-      }
-    }
-  }, []);
-
-  const startScanner = useCallback(async () => {
+  const startScannerImplementation = useCallback(async () => {
     if (!containerRef.current || !isOpen) return;
 
     setCameraError('');
     
     try {
-      // Clear any existing scanner and cleanup container
-      await stopScanner();
+      // 1. Force a permission check first directly to trigger browser prompt if needed
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          stream.getTracks().forEach(track => track.stop());
+        } catch (promptErr) {
+          console.warn('Initial permission check failed/was rejected:', promptErr);
+        }
+      }
+
+      // 2. Clear any existing scanner and cleanup container
+      if (scannerRef.current) {
+        try {
+          const state = scannerRef.current.getState();
+          if (state > 1) await scannerRef.current.stop();
+          await scannerRef.current.clear();
+        } catch (e) {
+          console.warn('Silent cleanup of old scanner failed:', e);
+        }
+      }
       
       const container = document.getElementById('qr-reader');
       if (container) {
         container.innerHTML = '';
       }
 
-      // Create new scanner instance
+      // 3. Create new scanner instance
       scannerRef.current = new Html5Qrcode('qr-reader', {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
         verbose: false,
       });
 
       const onScanSuccess = async (decodedText: string) => {
-        // Prevent multiple scans while processing
         if (isProcessingRef.current) return;
         isProcessingRef.current = true;
-        
         setScanState('processing');
         
         try {
-          // Stop scanner while processing
-          await stopScanner();
+          // Robust stop
+          if (scannerRef.current) {
+            const state = scannerRef.current.getState();
+            if (state > 1) await scannerRef.current.stop();
+          }
           
-          // Call the scan handler
           const result = await onScan(decodedText);
-          
           if (result.success) {
             setScanState('success');
             setSuccessMessage(result.message || 'Order completed successfully!');
-            // Auto-close after success
-            setTimeout(() => {
-              onClose();
-            }, 2000);
+            setTimeout(() => onClose(), 2000);
           } else {
             setScanState('error');
             setErrorMessage(result.error || 'Verification failed');
-            // Allow retry after error
             isProcessingRef.current = false;
           }
         } catch (err) {
           setScanState('error');
-          setErrorMessage('An unexpected error occurred');
+          setErrorMessage('An unexpected error occurred during verification');
           isProcessingRef.current = false;
         }
       };
 
       const config = {
-        fps: 10,
+        fps: 15, // Higher FPS for smoother responsiveness
         qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
           const boxSize = Math.floor(minEdge * 0.7);
           return { width: boxSize, height: boxSize };
         },
+        aspectRatio: 1.0,
       };
 
+      // 4. Try environment camera first
       try {
-        // Try environment camera first
         await scannerRef.current.start(
           { facingMode: 'environment' },
           config,
@@ -112,12 +113,18 @@ export function QRCodeScanner({
           () => {} // Silent scan error
         );
       } catch (envError) {
-        console.warn('Failed with environment camera, trying fallback...', envError);
+        console.warn('Failed with facingMode: environment, trying fallback...', envError);
         
-        // Fallback: Get all cameras and try the last one (usually the back camera)
+        // Fallback: Get all cameras and try to find a back camera
         const devices = await Html5Qrcode.getCameras();
         if (devices && devices.length > 0) {
-          const cameraId = devices.length > 1 ? devices[devices.length - 1].id : devices[0].id;
+          const backCam = devices.find(d => 
+            d.label.toLowerCase().includes('back') || 
+            d.label.toLowerCase().includes('rear') || 
+            d.label.toLowerCase().includes('environment')
+          );
+          
+          const cameraId = backCam ? backCam.id : devices[devices.length - 1].id;
           await scannerRef.current.start(
             cameraId,
             config,
@@ -129,21 +136,21 @@ export function QRCodeScanner({
         }
       }
     } catch (err: any) {
-      console.error('Camera error:', err);
+      console.error('Final Camera Error:', err);
       const errorName = err.name || '';
       const errorMessage = err.message || '';
       
       if (errorName === 'NotAllowedError' || errorMessage.includes('Permission')) {
-        setCameraError('Camera permission denied. Please allow camera access and try again.');
+        setCameraError('Camera permission denied. Please allow access in browser settings.');
       } else if (errorName === 'NotReadableError' || errorName === 'TrackStartError') {
-        setCameraError('Camera is already in use by another app or tab.');
+        setCameraError('Camera is currently busy or already in use by another tab.');
       } else if (errorName === 'NotFoundError') {
-        setCameraError('No camera found on this device.');
+        setCameraError('No camera detected on this device.');
       } else {
-        setCameraError('Failed to start camera. Please ensure it is available and not in use.');
+        setCameraError('Failed to start camera. Please check your settings and try again.');
       }
     }
-  }, [isOpen, onScan, onClose, stopScanner]);
+  }, [onScan, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -153,40 +160,32 @@ export function QRCodeScanner({
       setCameraError('');
       isProcessingRef.current = false;
       
-      // Increased delay to ensure Dialog transition is complete
       const timer = setTimeout(() => {
-        startScanner();
-      }, 500);
+        startScannerImplementation();
+      }, 800);
       
       return () => clearTimeout(timer);
     } else {
-      stopScanner();
-    }
-  }, [isOpen, startScanner, stopScanner]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
       if (scannerRef.current) {
-        stopScanner().then(() => {
-          if (scannerRef.current) {
-            scannerRef.current.clear();
-          }
-        });
+         const state = scannerRef.current.getState();
+         if (state > 1) scannerRef.current.stop().catch(() => {});
       }
-    };
-  }, [stopScanner]);
+    }
+  }, [isOpen, startScannerImplementation]);
 
   const handleRetry = async () => {
     setScanState('scanning');
     setErrorMessage('');
     setCameraError('');
     isProcessingRef.current = false;
-    await startScanner();
+    await startScannerImplementation();
   };
 
   const handleClose = async () => {
-    await stopScanner();
+    if (scannerRef.current) {
+        const state = scannerRef.current.getState();
+        if (state > 1) await scannerRef.current.stop();
+    }
     onClose();
   };
 
@@ -196,7 +195,7 @@ export function QRCodeScanner({
         <DialogHeader className="p-4 pb-2">
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
-            {title}
+            {title} <span className="text-[10px] opacity-50 font-normal">v1.2</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -207,29 +206,32 @@ export function QRCodeScanner({
               <div 
                 id="qr-reader" 
                 ref={containerRef}
-                className="w-full"
+                className="w-full bg-black/5"
                 style={{ minHeight: '300px' }}
               />
               
               {/* Scanning overlay */}
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-64 h-64 border-2 border-primary rounded-lg relative">
+                <div className="w-60 h-60 border-2 border-primary rounded-lg relative">
                   <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg" />
                   <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg" />
                   <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg" />
                   <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg" />
                   
                   {/* Scanning line animation */}
-                  <div className="absolute inset-x-0 h-0.5 bg-primary animate-scan" />
+                  <div className="absolute inset-x-0 h-0.5 bg-primary animate-scan opacity-60" />
                 </div>
               </div>
               
               {cameraError && (
-                <div className="absolute inset-0 bg-background/95 flex flex-col items-center justify-center p-6 text-center">
+                <div className="absolute inset-0 bg-background/95 flex flex-col items-center justify-center p-6 text-center z-50">
                   <XCircle className="h-12 w-12 text-destructive mb-4" />
-                  <p className="text-sm text-destructive font-medium mb-4">{cameraError}</p>
-                  <Button onClick={handleRetry} variant="outline">
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                  <p className="text-sm text-destructive font-medium mb-2">{cameraError}</p>
+                  <p className="text-xs text-muted-foreground mb-4 max-w-[250px]">
+                    Please ensure camera permissions are granted in your browser settings and you are using a secure (HTTPS) connection.
+                  </p>
+                  <Button onClick={handleRetry} variant="outline" className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
                     Try Again
                   </Button>
                 </div>
@@ -239,44 +241,49 @@ export function QRCodeScanner({
 
           {/* Processing State */}
           {scanState === 'processing' && (
-            <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="flex flex-col items-center justify-center py-20 px-6">
               <Loader2 className="h-16 w-16 text-primary animate-spin mb-4" />
               <p className="text-lg font-medium text-foreground">Verifying order...</p>
-              <p className="text-sm text-muted-foreground mt-1">Please wait</p>
+              <p className="text-sm text-muted-foreground mt-1 text-center">Please stay on this screen while we complete verification</p>
             </div>
           )}
 
           {/* Success State */}
           {scanState === 'success' && (
-            <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="flex flex-col items-center justify-center py-20 px-6">
               <div className="relative">
                 <CheckCircle className="h-20 w-20 text-green-500 animate-in zoom-in-50 duration-300" />
                 <div className="absolute inset-0 animate-ping">
                   <CheckCircle className="h-20 w-20 text-green-500 opacity-30" />
                 </div>
               </div>
-              <p className="text-xl font-bold text-green-600 mt-4">Success!</p>
-              <p className="text-sm text-muted-foreground mt-1">{successMessage}</p>
+              <p className="text-xl font-bold text-green-600 mt-4 text-center">Verification Successful!</p>
+              <p className="text-sm text-muted-foreground mt-1 text-center">{successMessage}</p>
             </div>
           )}
 
           {/* Error State */}
           {scanState === 'error' && (
-            <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="flex flex-col items-center justify-center py-20 px-6">
               <XCircle className="h-20 w-20 text-destructive animate-in zoom-in-50 duration-300" />
-              <p className="text-xl font-bold text-destructive mt-4">Verification Failed</p>
-              <p className="text-sm text-muted-foreground mt-1 text-center">{errorMessage}</p>
-              <Button onClick={handleRetry} className="mt-6">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Scan Another
-              </Button>
+              <p className="text-xl font-bold text-destructive mt-4 text-center">Verification Failed</p>
+              <p className="text-sm text-muted-foreground mt-2 text-center max-w-[280px]">{errorMessage}</p>
+              <div className="flex gap-3 mt-8">
+                <Button onClick={handleRetry} variant="default" className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Try Again
+                </Button>
+                <Button onClick={handleClose} variant="outline">
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div className="p-4 border-t bg-muted/30">
-          <Button variant="outline" className="w-full" onClick={handleClose}>
+          <Button variant="outline" className="w-full h-12 text-base font-medium" onClick={handleClose}>
             <X className="h-4 w-4 mr-2" />
             Close Scanner
           </Button>
@@ -288,10 +295,14 @@ export function QRCodeScanner({
             50% { top: calc(100% - 2px); }
           }
           .animate-scan {
-            animation: scan 2s ease-in-out infinite;
+            animation: scan 2.5s ease-in-out infinite;
           }
           #qr-reader video {
-            border-radius: 0 !important;
+            border-radius: 12px !important;
+            object-fit: cover !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 300px !important;
           }
           #qr-reader__scan_region {
             background: transparent !important;
