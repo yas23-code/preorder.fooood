@@ -33,15 +33,7 @@ export function QRCodeScanner({
     setCameraError('');
     
     try {
-      // 1. Force a permission check first directly to trigger browser prompt if needed
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          stream.getTracks().forEach(track => track.stop());
-        } catch (promptErr) {
-          console.warn('Initial permission check failed/was rejected:', promptErr);
-        }
-      }
+      // Permission is already granted before dialog opens (requested in parent component)
 
       // 2. Clear any existing scanner and cleanup container
       if (scannerRef.current) {

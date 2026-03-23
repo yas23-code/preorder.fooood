@@ -766,7 +766,21 @@ export function ShopOrdersManagement({ shopId, shopName }: ShopOrdersManagementP
 
           {/* QR Scan Button */}
           <Button
-            onClick={() => setIsScannerOpen(true)}
+            onClick={async () => {
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                stream.getTracks().forEach(track => track.stop());
+                setIsScannerOpen(true);
+              } catch (err: any) {
+                if (err.name === 'NotAllowedError') {
+                  toast({ title: 'Permission Denied', description: 'Camera permission denied. Please allow camera access in your browser/app settings.', variant: 'destructive' });
+                } else if (err.name === 'NotFoundError') {
+                  toast({ title: 'No Camera', description: 'No camera found on this device.', variant: 'destructive' });
+                } else {
+                  setIsScannerOpen(true);
+                }
+              }
+            }}
             className="w-full mb-4 py-6 text-lg"
           >
             <QrCode className="h-6 w-6 mr-3" />

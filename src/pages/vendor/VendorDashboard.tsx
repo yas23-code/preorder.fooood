@@ -859,7 +859,25 @@ export default function VendorDashboard() {
 
           {/* QR Scan Button */}
           <Button
-            onClick={() => setIsScannerOpen(true)}
+            onClick={async () => {
+              // Request camera permission BEFORE opening the dialog
+              // This ensures the browser prompt appears on the main page, not behind the modal
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                // Stop the stream immediately - we just needed the permission
+                stream.getTracks().forEach(track => track.stop());
+                setIsScannerOpen(true);
+              } catch (err: any) {
+                if (err.name === 'NotAllowedError') {
+                  toast.error('Camera permission denied. Please allow camera access in your browser/app settings and try again.');
+                } else if (err.name === 'NotFoundError') {
+                  toast.error('No camera found on this device.');
+                } else {
+                  // Permission might already be granted, try opening anyway
+                  setIsScannerOpen(true);
+                }
+              }
+            }}
             className="w-full mb-4 bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-6 text-lg"
           >
             <QrCode className="h-6 w-6 mr-3" />
