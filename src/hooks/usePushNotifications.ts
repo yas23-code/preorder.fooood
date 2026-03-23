@@ -50,7 +50,14 @@ export function usePushNotifications(userId: string | undefined) {
 
     const syncSubscriptionWithBackend = async (subscription: PushSubscription) => {
         if (!userId) return;
-        const { auth, p256dh } = subscription.toJSON() as { auth: string, p256dh: string };
+        const subscriptionJSON = subscription.toJSON();
+        const auth = subscriptionJSON.keys?.auth;
+        const p256dh = subscriptionJSON.keys?.p256dh;
+
+        if (!auth || !p256dh) {
+            console.error('Subscription keys are missing');
+            return;
+        }
 
         await supabase
             .from('push_subscriptions')
