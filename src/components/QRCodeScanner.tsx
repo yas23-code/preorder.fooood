@@ -158,11 +158,13 @@ export function QRCodeScanner({
       setIsCameraStarting(true);
       isProcessingRef.current = false;
       
-      const timer = setTimeout(() => {
+      // Use requestAnimationFrame to start immediately after DOM renders
+      let rafId: number;
+      rafId = requestAnimationFrame(() => {
         startScannerImplementation();
-      }, 150);
+      });
       
-      return () => clearTimeout(timer);
+      return () => cancelAnimationFrame(rafId);
     } else {
       if (scannerRef.current) {
          const state = scannerRef.current.getState();
