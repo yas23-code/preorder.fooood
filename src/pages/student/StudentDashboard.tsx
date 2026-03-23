@@ -117,7 +117,7 @@ export default function StudentDashboard() {
     }
   }, [activeOrder?.canteenId]);
 
-  const { permission, requestPermission, isSubscribed, sendTestNotification } = usePushNotifications(user?.id);
+  const { permission, requestPermission, isSubscribed, sendTestNotification, subscribeUserToPush, isSubscribing } = usePushNotifications(user?.id);
 
   // Check if user is banned on mount
   useEffect(() => {
@@ -309,6 +309,15 @@ export default function StudentDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={subscribeUserToPush}
+                        disabled={isSubscribing}
+                        className="h-7 text-[10px] px-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+                      >
+                        {isSubscribing ? 'Linking...' : 'Fix Connection'}
+                      </Button>
                       {isSubscribed && (
                         <Button
                           variant="outline"

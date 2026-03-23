@@ -116,7 +116,7 @@ export function usePushNotifications(userId: string | undefined) {
         }
     };
 
-    return { permission, requestPermission, isSubscribed, isSubscribing, sendTestNotification };
+    return { permission, requestPermission, isSubscribed, isSubscribing, sendTestNotification, subscribeUserToPush };
 }
 
 function urlBase64ToUint8Array(base64String: string) {
