@@ -76,20 +76,21 @@ export function usePushNotifications(userId: string | undefined) {
         try {
             setIsSubscribing(true);
             const registration = await navigator.serviceWorker.ready;
-
-            let subscription = await registration.pushManager.getSubscription();
-
-            if (!subscription) {
-                if (!VAPID_PUBLIC_KEY) {
-                    console.error('VAPID public key is missing in environment variables');
-                    return;
-                }
-
-                subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY.trim())
-                });
+            // ALWAYS unsubscribe first to ensure we use the newest VAPID key
+            const existingSubscription = await registration.pushManager.getSubscription();
+            if (existingSubscription) {
+                await existingSubscription.unsubscribe();
             }
+
+            if (!VAPID_PUBLIC_KEY) {
+                console.error('VAPID public key is missing in environment variables');
+                return;
+            }
+
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY.trim())
+            });
 
             await syncSubscriptionWithBackend(subscription);
             setIsSubscribed(true);
