@@ -141,14 +141,20 @@ export default function StudentDashboard() {
 
   // Request notification permissions
   useEffect(() => {
-    if (permission === 'default' && user) {
+    const hasPrompted = sessionStorage.getItem('notification_prompted');
+    if (permission === 'default' && user && !hasPrompted) {
       toast("Get updates on your order", {
         description: "Enable browser notifications to know exactly when your food is ready.",
         action: {
           label: "Enable",
-          onClick: () => requestPermission()
+          onClick: () => {
+            sessionStorage.setItem('notification_prompted', 'true');
+            requestPermission();
+          }
         },
       });
+      // Also mark as prompted if they just see it
+      sessionStorage.setItem('notification_prompted', 'true');
     }
   }, [permission, user]);
 
