@@ -46,8 +46,13 @@ export function QRCodeScanner({
     setCameraError('');
     
     try {
-      // Clear any existing scanner
+      // Clear any existing scanner and cleanup container
       await stopScanner();
+      
+      const container = document.getElementById('qr-reader');
+      if (container) {
+        container.innerHTML = '';
+      }
 
       // Create new scanner instance
       scannerRef.current = new Html5Qrcode('qr-reader', {
@@ -55,57 +60,88 @@ export function QRCodeScanner({
         verbose: false,
       });
 
-      await scannerRef.current.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-        },
-        async (decodedText) => {
-          // Prevent multiple scans while processing
-          if (isProcessingRef.current) return;
-          isProcessingRef.current = true;
+      const onScanSuccess = async (decodedText: string) => {
+        // Prevent multiple scans while processing
+        if (isProcessingRef.current) return;
+        isProcessingRef.current = true;
+        
+        setScanState('processing');
+        
+        try {
+          // Stop scanner while processing
+          await stopScanner();
           
-          setScanState('processing');
+          // Call the scan handler
+          const result = await onScan(decodedText);
           
-          try {
-            // Stop scanner while processing
-            await stopScanner();
-            
-            // Call the scan handler
-            const result = await onScan(decodedText);
-            
-            if (result.success) {
-              setScanState('success');
-              setSuccessMessage(result.message || 'Order completed successfully!');
-              // Auto-close after success
-              setTimeout(() => {
-                onClose();
-              }, 2000);
-            } else {
-              setScanState('error');
-              setErrorMessage(result.error || 'Verification failed');
-              // Allow retry after error
-              isProcessingRef.current = false;
-            }
-          } catch (err) {
+          if (result.success) {
+            setScanState('success');
+            setSuccessMessage(result.message || 'Order completed successfully!');
+            // Auto-close after success
+            setTimeout(() => {
+              onClose();
+            }, 2000);
+          } else {
             setScanState('error');
-            setErrorMessage('An unexpected error occurred');
+            setErrorMessage(result.error || 'Verification failed');
+            // Allow retry after error
             isProcessingRef.current = false;
           }
-        },
-        () => {
-          // QR scan error callback - silent, just means no QR detected yet
+        } catch (err) {
+          setScanState('error');
+          setErrorMessage('An unexpected error occurred');
+          isProcessingRef.current = false;
         }
-      );
+      };
+
+      const config = {
+        fps: 10,
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const boxSize = Math.floor(minEdge * 0.7);
+          return { width: boxSize, height: boxSize };
+        },
+      };
+
+      try {
+        // Try environment camera first
+        await scannerRef.current.start(
+          { facingMode: 'environment' },
+          config,
+          onScanSuccess,
+          () => {} // Silent scan error
+        );
+      } catch (envError) {
+        console.warn('Failed with environment camera, trying fallback...', envError);
+        
+        // Fallback: Get all cameras and try the last one (usually the back camera)
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          const cameraId = devices.length > 1 ? devices[devices.length - 1].id : devices[0].id;
+          await scannerRef.current.start(
+            cameraId,
+            config,
+            onScanSuccess,
+            () => {}
+          );
+        } else {
+          throw envError;
+        }
+      }
     } catch (err: any) {
       console.error('Camera error:', err);
-      setCameraError(
-        err.message?.includes('NotAllowedError') || err.message?.includes('Permission')
-          ? 'Camera permission denied. Please allow camera access and try again.'
-          : 'Failed to start camera. Please ensure camera is available.'
-      );
+      const errorName = err.name || '';
+      const errorMessage = err.message || '';
+      
+      if (errorName === 'NotAllowedError' || errorMessage.includes('Permission')) {
+        setCameraError('Camera permission denied. Please allow camera access and try again.');
+      } else if (errorName === 'NotReadableError' || errorName === 'TrackStartError') {
+        setCameraError('Camera is already in use by another app or tab.');
+      } else if (errorName === 'NotFoundError') {
+        setCameraError('No camera found on this device.');
+      } else {
+        setCameraError('Failed to start camera. Please ensure it is available and not in use.');
+      }
     }
   }, [isOpen, onScan, onClose, stopScanner]);
 
@@ -117,10 +153,10 @@ export function QRCodeScanner({
       setCameraError('');
       isProcessingRef.current = false;
       
-      // Small delay to ensure DOM is ready
+      // Increased delay to ensure Dialog transition is complete
       const timer = setTimeout(() => {
         startScanner();
-      }, 100);
+      }, 500);
       
       return () => clearTimeout(timer);
     } else {
@@ -131,13 +167,20 @@ export function QRCodeScanner({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopScanner();
+      if (scannerRef.current) {
+        stopScanner().then(() => {
+          if (scannerRef.current) {
+            scannerRef.current.clear();
+          }
+        });
+      }
     };
   }, [stopScanner]);
 
   const handleRetry = async () => {
     setScanState('scanning');
     setErrorMessage('');
+    setCameraError('');
     isProcessingRef.current = false;
     await startScanner();
   };
