@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "food.preorder.twa",
+      "package_name": "food.preorder.www.twa",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_YOUR_SHA256_FINGERPRINT"
+        "20:B6:9F:57:29:9F:B3:7E:1C:33:A3:B4:70:88:60:A0:CA:BE:39:6E:10:94:F7:80:B8:B4:00:71:20:59:9C:5B"
       ]
     }
   }
