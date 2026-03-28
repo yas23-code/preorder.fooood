@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useQRVerification } from '@/hooks/useQRVerification';
-import { ClipboardList, Clock, CheckCircle, Package, Plus, LogOut, Tag, Search, X, IndianRupee, ShoppingBag, AlertCircle, XCircle, QrCode } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, Package, Plus, LogOut, Tag, Search, X, IndianRupee, ShoppingBag, AlertCircle, XCircle, QrCode, Settings } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
@@ -775,6 +775,17 @@ export default function VendorDashboard() {
               <Button asChild size="icon" variant="outline" className="md:hidden">
                 <Link to="/vendor/coupons">
                   <Tag className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="icon" variant="outline" className="md:hidden">
+                <Link to="/vendor/settings">
+                  <Settings className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" className="hidden md:flex text-mcd-text hover:text-mcd-red hover:bg-mcd-selected">
+                <Link to="/vendor/settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
                 </Link>
               </Button>
               <Button variant="ghost" onClick={logout} className="hidden md:flex text-mcd-text hover:text-mcd-red hover:bg-mcd-selected">

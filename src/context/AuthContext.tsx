@@ -27,6 +27,7 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<Profile>) => Promise<boolean>;
   checkBanStatus: (targetId: string, targetType: 'student' | 'canteen') => Promise<boolean>;
 }
 
@@ -220,6 +221,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     toast.success('Logged out successfully');
   };
 
+  const updateProfile = async (updates: Partial<Profile>): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+
+      setProfile(prev => prev ? { ...prev, ...updates } : prev);
+      toast.success('Profile updated successfully');
+      return true;
+    } catch (error) {
+      toast.error('An unexpected error occurred');
+      return false;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -232,6 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signup,
       loginWithGoogle,
       logout,
+      updateProfile,
       checkBanStatus,
     }}>
       {children}

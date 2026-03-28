@@ -10,6 +10,12 @@ interface VendorEmailPayload {
   canteen_id: string
 }
 
+interface OrderItem {
+  name: string
+  quantity: number
+  price: number
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -54,7 +60,7 @@ Deno.serve(async (req) => {
     // Get vendor profile for name and email fallback
     const { data: vendorProfile, error: vendorError } = await supabase
       .from('profiles')
-      .select('name, email')
+      .select('name, email, phone')
       .eq('id', canteen.vendor_id)
       .single()
 
@@ -62,14 +68,24 @@ Deno.serve(async (req) => {
       console.error('Failed to get vendor profile:', vendorError)
     }
 
+    // Try to get vendor email from canteen table
+    let emailSource = 'canteen_table'
     let vendorEmail = canteen.vendor_email
-    if (!vendorEmail) {
-      console.log(`Vendor email not set for canteen, falling back to profile email for vendor: ${canteen.vendor_id}`)
+
+    if (!vendorEmail || vendorEmail.trim() === '') {
+      console.log(`Vendor email not set in canteen table for "${canteen.name}". Trying vendor profile: ${canteen.vendor_id}`)
+      emailSource = 'vendor_profile'
       vendorEmail = vendorProfile?.email
     }
 
-    // Final fallback
-    vendorEmail = vendorEmail || FROM_EMAIL
+    // Final check - if we still don't have an email, use fallback but log big warning
+    if (!vendorEmail || vendorEmail.trim() === '') {
+      console.warn(`CRITICAL: No vendor email discovered for canteen "${canteen.name}" (ID: ${canteen_id}). No email in canteens table or vendor profile (${canteen.vendor_id}). Falling back to system email: ${FROM_EMAIL}`)
+      emailSource = 'system_fallback'
+      vendorEmail = FROM_EMAIL
+    }
+
+    console.log(`Resolved vendor email: ${vendorEmail} (Source: ${emailSource}) for order ${order_id}`)
 
     // Get order details
     const { data: order, error: orderError } = await supabase
@@ -89,7 +105,7 @@ Deno.serve(async (req) => {
     // Get customer details
     const { data: customer, error: customerError } = await supabase
       .from('profiles')
-      .select('name, email')
+      .select('name, email, phone')
       .eq('id', order.user_id)
       .single()
 
@@ -98,6 +114,7 @@ Deno.serve(async (req) => {
     }
 
     const customerName = customer?.name || 'Customer'
+    const vendorPhone = vendorProfile?.phone
 
     // Get order items
     const { data: orderItems, error: itemsError } = await supabase
@@ -110,7 +127,7 @@ Deno.serve(async (req) => {
     }
 
     const items = orderItems || []
-    const orderTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const orderTotal = items.reduce((sum: number, item: OrderItem) => sum + (item.price * item.quantity), 0)
     const vendorName = vendorProfile?.name || 'Vendor'
     const canteenName = canteen.name || 'Your Canteen'
 
@@ -129,7 +146,7 @@ Deno.serve(async (req) => {
             </tr>
           </thead>
           <tbody>
-            ${items.map((item, index) => `
+            ${items.map((item: OrderItem, index: number) => `
               <tr style="border-top: 1px solid #e5e7eb;${index % 2 === 1 ? ' background-color: #f9fafb;' : ''}">
                 <td style="padding: 12px 16px; font-size: 14px; color: #374151;">${item.name}</td>
                 <td style="text-align: center; padding: 12px 16px; font-size: 14px; color: #374151;">${item.quantity}</td>
@@ -150,7 +167,7 @@ Deno.serve(async (req) => {
     // Generate order items text
     const orderItemsText = items.length > 0 ? `
 Order Items:
-${items.map(item => `- ${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}`).join('\n')}
+${items.map((item: OrderItem) => `- ${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}`).join('\n')}
 Total: ₹${Number(orderTotal).toFixed(2)}
 ` : ''
 
@@ -160,9 +177,51 @@ Total: ₹${Number(orderTotal).toFixed(2)}
       timeStyle: 'short',
     })
 
-    console.log(`Sending new order email to vendor: ${vendorEmail} for order: ${order_id}`)
+    // Log the planned notification actions clearly
+    console.log(`[NOTIFICATION ACTION] Sending new order notifications for:
+      Order ID: ${order_id}
+      Canteen: ${canteenName}
+      Email: ${vendorEmail} (Source: ${emailSource})
+      SMS Phone: ${vendorPhone || 'NOT CONFIGURED'}
+      Items: ${items.length}
+    `)
 
-    // Send email via Brevo API - using system email for better deliverability
+    // --- SEND SMS (If vendor phone exists) ---
+    let smsResult = null;
+    if (vendorPhone) {
+      try {
+        // Format phone number for Brevo (must include country code, assuming +91 for India if 10 digits)
+        let formattedPhone = vendorPhone.replace(/\D/g, '');
+        if (formattedPhone.length === 10) {
+          formattedPhone = '91' + formattedPhone;
+        }
+
+        const smsContent = `🔔 New Order! #${order_id.slice(0, 8).toUpperCase()} at ${canteenName.slice(0, 15)}. Customer: ${customerName.slice(0, 15)}. Items: ${items.length}. Total: ₹${Number(orderTotal).toFixed(0)}. Please prepare it promptly!`;
+
+        console.log(`Attempting to send SMS to ${formattedPhone}...`);
+        const smsResponse = await fetch('https://api.brevo.com/v3/transactionalSMS/sms', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'api-key': BREVO_API_KEY,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'transactional',
+            sender: 'PreOrder',
+            recipient: formattedPhone,
+            content: smsContent,
+          }),
+        });
+
+        smsResult = await smsResponse.json();
+        console.log(`SMS notification result for ${formattedPhone}:`, JSON.stringify(smsResult));
+      } catch (smsError) {
+        console.error('Failed to send SMS notification:', smsError);
+      }
+    }
+
+    // --- SEND EMAIL ---
     const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -256,17 +315,22 @@ This is an automated notification from PreOrder.`,
     const brevoResult = await brevoResponse.json()
 
     if (!brevoResponse.ok) {
-      console.error('Brevo API error:', brevoResult)
+      console.error(`Brevo API error for order ${order_id}:`, JSON.stringify(brevoResult))
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to send email', details: brevoResult }),
+        JSON.stringify({ success: false, error: 'Failed to send email via Brevo', details: brevoResult, smsResult }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Vendor email sent successfully for order ${order_id}:`, brevoResult)
+    console.log(`Vendor email sent successfully for order ${order_id} to ${vendorEmail}. MessageId: ${brevoResult.messageId}`)
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Vendor email sent successfully', messageId: brevoResult.messageId }),
+      JSON.stringify({
+        success: true,
+        message: 'Vendor notifications sent successfully',
+        emailMessageId: brevoResult.messageId,
+        smsResult: smsResult
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error: unknown) {

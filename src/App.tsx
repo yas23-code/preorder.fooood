@@ -35,6 +35,7 @@ import VendorDashboard from "./pages/vendor/VendorDashboard";
 import MenuManagement from "./pages/vendor/MenuManagement";
 import VendorRegister from "./pages/vendor/VendorRegister";
 import CouponManagement from "./pages/vendor/CouponManagement";
+import VendorSettings from "./pages/vendor/VendorSettings";
 
 // Admin Pages
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
@@ -234,7 +235,14 @@ const App = () => (
                     }
                   />
 
-                  {/* Catch-all */}
+                  <Route
+                    path="/vendor/settings"
+                    element={
+                      <ProtectedRoute allowedRole="vendor">
+                        <VendorSettings />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

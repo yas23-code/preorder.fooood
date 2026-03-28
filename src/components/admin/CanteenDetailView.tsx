@@ -269,6 +269,45 @@ export function CanteenDetailView({ canteenId, onBack }: CanteenDetailViewProps)
             </div>
           </div>
 
+          <div className="pt-4 border-t">
+            <h4 className="text-sm font-semibold mb-3">Notification Settings</h4>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+              <div className="flex-1 w-full max-w-sm">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Vendor Notification Email</label>
+                <input
+                  type="email"
+                  value={canteen.vendor_email || ''}
+                  onChange={(e) => setCanteen(prev => prev ? { ...prev, vendor_email: e.target.value } : null)}
+                  placeholder="vendor@example.com"
+                  className="w-full bg-muted/50 border border-input rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+              <Button 
+                size="sm" 
+                className="mt-5"
+                onClick={async () => {
+                  try {
+                    const { error } = await supabase
+                      .from('canteens')
+                      .update({ vendor_email: canteen.vendor_email })
+                      .eq('id', canteenId);
+                    
+                    if (error) throw error;
+                    toast.success('Vendor email updated successfully');
+                  } catch (err) {
+                    console.error('Error updating vendor email:', err);
+                    toast.error('Failed to update vendor email');
+                  }
+                }}
+              >
+                Save Email
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2 italic">
+              * This email receives notifications for every new order. If empty, it falls back to the vendor's profile email.
+            </p>
+          </div>
+
           {/* Order Statistics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
             <div className="bg-primary/10 rounded-lg p-4">

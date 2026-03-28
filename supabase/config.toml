@@ -1,4 +1,4 @@
-project_id = "knhnzzkyctskkgqfprsz"
+project_id = "neyivixyrtinuhvplcvf"
 
 [functions.create-cashfree-order]
 verify_jwt = false
@@ -31,4 +31,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.demand-prediction]
+verify_jwt = false
+
+[functions.send-broadcast-email]
 verify_jwt = false
