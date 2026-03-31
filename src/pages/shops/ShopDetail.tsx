@@ -7,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { AnimatedSearchInput } from '@/components/AnimatedSearchInput';
 import { toast } from 'sonner';
-import { 
-  ArrowLeft, 
-  Store, 
+import {
+  ArrowLeft,
+  Store,
   UtensilsCrossed,
   Plus,
   Clock,
@@ -123,33 +123,34 @@ export default function ShopDetail() {
     return ['All', ...uniqueCategories];
   }, [menuItems]);
 
-  // Get category image (first item's image in that category)
+  // Get category image (first item with an image in that category)
   const getCategoryImage = (category: string): string | null => {
     if (category === 'All') {
-      return shop?.image_url || menuItems[0]?.image_url || null;
+      const firstItemWithImage = menuItems.find(item => item.image_url);
+      return firstItemWithImage?.image_url || shop?.image_url || null;
     }
-    const categoryItem = menuItems.find(item => item.category === category);
-    return categoryItem?.image_url || null;
+    const categoryItemWithImage = menuItems.find(item => item.category === category && item.image_url);
+    return categoryItemWithImage?.image_url || null;
   };
 
   // Filter items based on selected category and search query
   const filteredItems = useMemo(() => {
     let items = menuItems;
-    
+
     // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      items = items.filter(item => 
+      items = items.filter(item =>
         item.name.toLowerCase().includes(query) ||
         item.description?.toLowerCase().includes(query)
       );
     }
-    
+
     // Filter by category
     if (selectedCategory !== 'All') {
       items = items.filter(item => item.category === selectedCategory);
     }
-    
+
     return items;
   }, [menuItems, selectedCategory, searchQuery]);
 
@@ -205,11 +206,11 @@ export default function ShopDetail() {
                 <p className="text-xs text-muted-foreground">{shop.address}</p>
               </div>
             </div>
-            
+
             {/* Cart Icon */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate(`/shop/${shopId}/cart`)}
               className="relative"
             >
@@ -229,12 +230,12 @@ export default function ShopDetail() {
         {/* What are you craving? */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">What are you craving?</h2>
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className={cn(
               "border",
-              shop.is_open 
-                ? "bg-green-500/10 border-green-500/30 text-green-600" 
+              shop.is_open
+                ? "bg-green-500/10 border-green-500/30 text-green-600"
                 : "bg-muted border-muted-foreground/30 text-muted-foreground"
             )}
           >
@@ -252,7 +253,7 @@ export default function ShopDetail() {
               className="w-full bg-card border border-border shadow-sm rounded-full pl-4 pr-4 h-11 text-sm"
             />
           </div>
-          <Button 
+          <Button
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 rounded-full text-sm h-11"
           >
             Search
@@ -278,7 +279,7 @@ export default function ShopDetail() {
               {categories.map((category) => {
                 const categoryImage = getCategoryImage(category);
                 const isSelected = selectedCategory === category;
-                
+
                 return (
                   <button
                     key={category}
@@ -288,8 +289,8 @@ export default function ShopDetail() {
                     <div
                       className={cn(
                         "w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 transition-all duration-200",
-                        isSelected 
-                          ? "border-primary ring-2 ring-primary/30 scale-105" 
+                        isSelected
+                          ? "border-primary ring-2 ring-primary/30 scale-105"
                           : "border-border hover:border-primary/50"
                       )}
                     >
@@ -305,7 +306,7 @@ export default function ShopDetail() {
                         </div>
                       )}
                     </div>
-                    <span 
+                    <span
                       className={cn(
                         "text-sm font-medium text-center truncate max-w-full",
                         isSelected ? "text-primary" : "text-foreground"

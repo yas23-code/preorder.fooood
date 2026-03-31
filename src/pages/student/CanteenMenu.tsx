@@ -149,17 +149,32 @@ export default function CanteenMenu() {
 
   // Get unique categories from menu items if no categories defined
   const displayCategories = useMemo(() => {
-    // Always include "All" category first
-    const allCategory: Category = { id: 'all', name: 'All', image_url: canteen?.image_url || null };
+    // For "All" category, try to find the first menu item with an image, fallback to canteen image
+    const firstItemAny = menuItems.find(item => item.image_url);
+    const allCategory: Category = {
+      id: 'all',
+      name: 'All',
+      image_url: firstItemAny?.image_url || canteen?.image_url || null
+    };
 
     let categoryList: Category[] = [];
 
     if (categories.length > 0) {
-      categoryList = categories;
+      categoryList = categories.map(cat => {
+        // Find first item in this category with an image to use as category image
+        const firstItemInCat = menuItems.find(item => item.category === cat.name && item.image_url);
+        return {
+          ...cat,
+          image_url: firstItemInCat?.image_url || cat.image_url || null
+        };
+      });
     } else {
       // Get unique categories from menu items
       const uniqueCategories = [...new Set(menuItems.map(item => item.category))];
-      categoryList = uniqueCategories.map(name => ({ id: name, name, image_url: null }));
+      categoryList = uniqueCategories.map(name => {
+        const firstItemInCat = menuItems.find(item => item.category === name && item.image_url);
+        return { id: name, name, image_url: firstItemInCat?.image_url || null };
+      });
     }
 
     return [allCategory, ...categoryList];

@@ -190,15 +190,16 @@ Total: ₹${Number(orderTotal).toFixed(2)}
     let smsResult = null;
     if (vendorPhone) {
       try {
-        // Format phone number for Brevo (must include country code, assuming +91 for India if 10 digits)
+        // Format phone number for Brevo (must include country code and + sign)
         let formattedPhone = vendorPhone.replace(/\D/g, '');
         if (formattedPhone.length === 10) {
           formattedPhone = '91' + formattedPhone;
         }
+        const recipient = '+' + formattedPhone;
 
         const smsContent = `🔔 New Order! #${order_id.slice(0, 8).toUpperCase()} at ${canteenName.slice(0, 15)}. Customer: ${customerName.slice(0, 15)}. Items: ${items.length}. Total: ₹${Number(orderTotal).toFixed(0)}. Please prepare it promptly!`;
 
-        console.log(`Attempting to send SMS to ${formattedPhone}...`);
+        console.log(`Attempting to send SMS to ${recipient}...`);
         const smsResponse = await fetch('https://api.brevo.com/v3/transactionalSMS/sms', {
           method: 'POST',
           headers: {
@@ -209,7 +210,7 @@ Total: ₹${Number(orderTotal).toFixed(2)}
           body: JSON.stringify({
             type: 'transactional',
             sender: 'PreOrder',
-            recipient: formattedPhone,
+            recipient: recipient,
             content: smsContent,
           }),
         });
