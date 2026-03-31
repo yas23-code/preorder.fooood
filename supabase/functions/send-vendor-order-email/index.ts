@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
 
   try {
     const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')
+    const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@preorder.food'
@@ -57,10 +58,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get vendor profile for name and email fallback
+    // Get vendor profile for name, email fallback, phone, and telegram
     const { data: vendorProfile, error: vendorError } = await supabase
       .from('profiles')
-      .select('name, email, phone')
+      .select('name, email, phone, telegram_chat_id')
       .eq('id', canteen.vendor_id)
       .single()
 
@@ -115,6 +116,7 @@ Deno.serve(async (req) => {
 
     const customerName = customer?.name || 'Customer'
     const vendorPhone = vendorProfile?.phone
+    const vendorTelegramChatId = vendorProfile?.telegram_chat_id
 
     // Get order items
     const { data: orderItems, error: itemsError } = await supabase
@@ -183,6 +185,7 @@ Total: ₹${Number(orderTotal).toFixed(2)}
       Canteen: ${canteenName}
       Email: ${vendorEmail} (Source: ${emailSource})
       SMS Phone: ${vendorPhone || 'NOT CONFIGURED'}
+      Telegram: ${vendorTelegramChatId ? 'LINKED' : 'NOT LINKED'}
       Items: ${items.length}
     `)
 
@@ -220,6 +223,41 @@ Total: ₹${Number(orderTotal).toFixed(2)}
       } catch (smsError) {
         console.error('Failed to send SMS notification:', smsError);
       }
+    }
+
+    // --- SEND TELEGRAM (If vendor has linked Telegram) ---
+    let telegramResult = null;
+    if (vendorTelegramChatId && TELEGRAM_BOT_TOKEN) {
+      try {
+        const telegramMessage =
+          `🔔 *New Order Received!*\n\n` +
+          `📋 *Order:* #${order_id.slice(0, 8).toUpperCase()}\n` +
+          `🏪 *Canteen:* ${canteenName}\n` +
+          `👤 *Customer:* ${customerName}\n` +
+          `🕐 *Time:* ${orderDate}\n\n` +
+          `📦 *Items:*\n` +
+          items.map((item: OrderItem) => `  • ${item.name} x${item.quantity} — ₹${(item.price * item.quantity).toFixed(0)}`).join('\n') +
+          `\n\n💰 *Total: ₹${Number(orderTotal).toFixed(0)}*\n\n` +
+          `⏱️ Please prepare this order and mark it as "Ready" when done!`;
+
+        console.log(`Attempting to send Telegram notification to chat ${vendorTelegramChatId}...`);
+        const tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: vendorTelegramChatId,
+            text: telegramMessage,
+            parse_mode: 'Markdown',
+          }),
+        });
+
+        telegramResult = await tgResponse.json();
+        console.log(`Telegram notification result:`, JSON.stringify(telegramResult));
+      } catch (tgError) {
+        console.error('Failed to send Telegram notification:', tgError);
+      }
+    } else {
+      console.log(`Telegram notification skipped - ${!vendorTelegramChatId ? 'No chat ID linked' : 'Bot token not configured'}`);
     }
 
     // --- SEND EMAIL ---
@@ -330,7 +368,8 @@ This is an automated notification from PreOrder.`,
         success: true,
         message: 'Vendor notifications sent successfully',
         emailMessageId: brevoResult.messageId,
-        smsResult: smsResult
+        smsResult: smsResult,
+        telegramResult: telegramResult
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
