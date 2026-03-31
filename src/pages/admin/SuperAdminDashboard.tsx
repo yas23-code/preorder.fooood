@@ -6,6 +6,7 @@ import { SearchModule } from '@/components/admin/SearchModule';
 import { StudentDetailView } from '@/components/admin/StudentDetailView';
 import { CanteenDetailView } from '@/components/admin/CanteenDetailView';
 import { DailyCollectionReport } from '@/components/admin/DailyCollectionReport';
+import { MonthlyIncomeReport } from '@/components/admin/MonthlyIncomeReport';
 import { BannedEntitiesList } from '@/components/admin/BannedEntitiesList';
 import { CollegeConfigManager } from '@/components/admin/CollegeConfigManager';
 import { PendingShopApprovals } from '@/components/admin/PendingShopApprovals';
@@ -14,7 +15,7 @@ import { RejectedOrdersList } from '@/components/admin/RejectedOrdersList';
 import { LogOut, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-type ViewState = 
+type ViewState =
   | { type: 'search' }
   | { type: 'student'; id: string }
   | { type: 'canteen'; id: string };
@@ -75,6 +76,9 @@ export default function SuperAdminDashboard() {
 
             {/* Rejected Orders for Refunds */}
             <RejectedOrdersList />
+
+            {/* Monthly Report */}
+            <MonthlyIncomeReport />
 
             {/* Daily Report */}
             <DailyCollectionReport />
