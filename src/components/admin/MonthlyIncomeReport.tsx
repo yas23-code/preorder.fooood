@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { IndianRupee, TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { IndianRupee, TrendingUp, Calendar } from 'lucide-react';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 
@@ -22,18 +22,24 @@ export function MonthlyIncomeReport() {
     const [reportData, setReportData] = useState<CanteenMonthlyIncome[]>([]);
     const [months, setMonths] = useState<string[]>([]); // monthKeys like '2024-03'
     const [isLoading, setIsLoading] = useState(true);
-    const [offset, setOffset] = useState(0); // For pagination if we want to see older months
 
     useEffect(() => {
         const fetchMonthlyReport = async () => {
             setIsLoading(true);
             try {
-                // Generate last 6 months keys
+                // Generate months from March 2026 up to current date
+                const startDate = new Date('2026-03-01');
+                const now = new Date();
                 const monthKeys: string[] = [];
-                for (let i = 5; i >= 0; i--) {
-                    const date = subMonths(new Date(), i + offset * 6);
-                    monthKeys.push(format(date, 'yyyy-MM'));
+
+                let current = startOfMonth(startDate);
+                const limit = startOfMonth(now);
+
+                while (current <= limit) {
+                    monthKeys.push(format(current, 'yyyy-MM'));
+                    current = addMonths(current, 1);
                 }
+
                 setMonths(monthKeys);
 
                 // Fetch all canteens
@@ -45,15 +51,15 @@ export function MonthlyIncomeReport() {
                 if (canteensError) throw canteensError;
 
                 // Fetch orders for the range
-                const startDate = startOfMonth(subMonths(new Date(), 5 + offset * 6)).toISOString();
-                const endDate = endOfMonth(new Date()).toISOString();
+                const queryStartDate = startOfMonth(startDate).toISOString();
+                const queryEndDate = endOfMonth(now).toISOString();
 
                 const { data: orders, error: ordersError } = await supabase
                     .from('orders')
                     .select('canteen_id, total, platform_fee, created_at')
                     .eq('payment_status', 'paid')
-                    .gte('created_at', startDate)
-                    .lte('created_at', endDate);
+                    .gte('created_at', queryStartDate)
+                    .lte('created_at', queryEndDate);
 
                 if (ordersError) throw ordersError;
 
@@ -88,7 +94,7 @@ export function MonthlyIncomeReport() {
         };
 
         fetchMonthlyReport();
-    }, [offset]);
+    }, []);
 
     const formatMonthLabel = (key: string) => {
         return format(new Date(key + '-01'), 'MMM yyyy');
@@ -101,25 +107,6 @@ export function MonthlyIncomeReport() {
                     <TrendingUp className="h-5 w-5 text-primary" />
                     Monthly Income by Canteen
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setOffset(prev => prev + 1)}
-                        title="Older Months"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setOffset(prev => Math.max(0, prev - 1))}
-                        disabled={offset === 0}
-                        title="Newer Months"
-                    >
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
             </CardHeader>
             <CardContent>
                 {isLoading ? (
