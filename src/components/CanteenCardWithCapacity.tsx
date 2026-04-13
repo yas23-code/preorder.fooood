@@ -21,7 +21,7 @@ interface CanteenCardWithCapacityProps {
 
 export function CanteenCardWithCapacity({ canteen, index }: CanteenCardWithCapacityProps) {
   const { activeOrderCount, orderLimit, isLoading, isAtLimit } = useCanteenOrderStatus(canteen.id);
-  const isComingSoon = canteen.name.toLowerCase().includes('gauri cafe');
+  const isComingSoon = canteen.name.toLowerCase().includes('gauri cafe') || canteen.name.toLowerCase().includes('happynings');
 
   const CardContent = (
     <div className="flex items-stretch opacity-90">

@@ -162,6 +162,37 @@ export default function ShopDetail() {
     );
   }
 
+  const isComingSoon = shop?.shop_name.toLowerCase().includes('happynings');
+
+  if (isComingSoon) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
+          <div className="container max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/student/dashboard')}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="font-semibold text-lg">{shop?.shop_name}</h1>
+          </div>
+        </div>
+        <div className="container max-w-4xl mx-auto px-4 py-16">
+          <div className="flex flex-col items-center justify-center text-center py-16">
+            <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center mb-6">
+              <Clock className="h-12 w-12 text-amber-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Coming Soon</h2>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              {shop?.shop_name} is not yet launched on Preorder. We're working hard to get it ready for you!
+            </p>
+            <Button onClick={() => navigate('/student/dashboard')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !shop) {
     return (
       <div className="min-h-screen bg-background">

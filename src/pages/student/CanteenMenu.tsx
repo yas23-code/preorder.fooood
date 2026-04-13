@@ -299,6 +299,47 @@ export default function CanteenMenu() {
     );
   }
 
+  const isComingSoon = canteen?.name.toLowerCase().includes('gauri cafe') || canteen?.name.toLowerCase().includes('happynings');
+
+  if (isComingSoon) {
+    return (
+      <div className="min-h-screen bg-amber-50">
+        <header className="sticky top-0 z-50 border-b border-amber-200 bg-amber-50">
+          <div className="max-w-7xl mx-auto px-3 md:px-4 py-3 md:py-4 flex items-center">
+            <button
+              onClick={() => navigate('/student/dashboard')}
+              className="flex items-center gap-1 md:gap-2 text-foreground hover:text-primary transition-colors text-sm md:text-base"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+
+            <div className="flex-1 text-center px-2">
+              <h1 className="text-base md:text-xl font-bold font-display truncate">{canteen?.name}</h1>
+              <p className="text-xs md:text-sm text-muted-foreground truncate">{canteen?.location}</p>
+            </div>
+
+            <div className="w-9 md:w-10" />
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center text-center py-16">
+            <div className="w-24 h-24 rounded-full bg-amber-100 flex items-center justify-center mb-6">
+              <Clock className="h-12 w-12 text-amber-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Coming Soon</h2>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              {canteen?.name} is not yet launched on Preorder. We're working hard to get it ready for you!
+            </p>
+            <Button asChild variant="gradient">
+              <Link to="/student/dashboard">Back to Dashboard</Link>
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Check if canteen is closed
   if (!canteen.is_open) {
     return (
