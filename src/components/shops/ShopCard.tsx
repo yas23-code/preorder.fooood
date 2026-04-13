@@ -128,15 +128,15 @@ export function ShopCard({ shop }: ShopCardProps) {
             </div>
           </div>
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-            <Store className="w-16 h-16 text-muted-foreground/50" />
+          <div className={`w-full h-full bg-gradient-to-br ${isComingSoon ? 'from-mcd-yellow to-yellow-400' : 'from-primary/20 to-primary/5'} flex items-center justify-center`}>
+            <Store className={`w-16 h-16 ${isComingSoon ? 'text-mcd-red' : 'text-muted-foreground/50'}`} />
           </div>
         )}
 
         {/* Coming Soon badge */}
         {isComingSoon && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-            <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider animate-pulse">
+          <div className="absolute inset-0 bg-mcd-yellow/10 flex items-center justify-center z-10">
+            <span className="bg-mcd-yellow text-foreground text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-md border border-mcd-red/20 animate-pulse">
               Coming Soon
             </span>
           </div>
@@ -147,8 +147,8 @@ export function ShopCard({ shop }: ShopCardProps) {
           <div className="absolute top-2 left-2 pointer-events-none">
             <Badge
               className={`px-2 py-1 text-xs font-semibold shadow-md ${isOpen
-                  ? 'bg-white text-green-600'
-                  : 'bg-white text-red-500'
+                ? 'bg-white text-green-600'
+                : 'bg-white text-red-500'
                 }`}
             >
               <span className={`w-2 h-2 rounded-full mr-2 ${isOpen ? 'bg-green-500' : 'bg-red-500'}`}></span>

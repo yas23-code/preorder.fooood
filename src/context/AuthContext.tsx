@@ -13,6 +13,7 @@ interface Profile {
   phone?: string | null;
   wallet_balance?: number;
   is_abes_student?: boolean | null;
+  is_abes_verified?: boolean;
   created_at: string;
   updated_at: string;
 }

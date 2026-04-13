@@ -34,15 +34,15 @@ export function CanteenCardWithCapacity({ canteen, index }: CanteenCardWithCapac
             className={`w-full h-full object-cover ${isComingSoon ? 'grayscale' : ''}`}
           />
         ) : (
-          <div className={`w-full h-full bg-gradient-to-br ${isComingSoon ? 'from-gray-200 to-gray-300' : 'from-mcd-yellow to-yellow-400'} flex items-center justify-center`}>
+          <div className={`w-full h-full bg-gradient-to-br ${isComingSoon ? 'from-mcd-yellow/50 to-mcd-yellow' : 'from-mcd-yellow to-yellow-400'} flex items-center justify-center`}>
             <span className="text-3xl md:text-4xl">{isComingSoon ? '🚧' : '🍽️'}</span>
           </div>
         )}
 
         {/* Coming Soon badge */}
         {isComingSoon && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="bg-amber-500 text-white text-[10px] md:text-xs font-bold px-2 py-1 md:px-3 md:py-1 rounded-full uppercase tracking-wider animate-pulse">
+          <div className="absolute inset-0 bg-mcd-yellow/10 flex items-center justify-center">
+            <span className="bg-mcd-yellow text-foreground text-[10px] md:text-xs font-bold px-2 py-1 md:px-3 md:py-1 rounded-full uppercase tracking-wider shadow-md border border-mcd-red/10 animate-pulse">
               Coming Soon
             </span>
           </div>

@@ -20,8 +20,18 @@ import {
   Loader2,
   Store,
   CreditCard,
-  Clock
+  Clock,
+  Ticket
 } from 'lucide-react';
+import { CollegeVerificationModal } from '@/components/student/CollegeVerificationModal';
+
+interface Coupon {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  minimum_amount: number | null;
+}
 
 declare global {
   interface Window {
@@ -61,8 +71,26 @@ export default function ShopCart() {
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [menuItemPrepTimes, setMenuItemPrepTimes] = useState<Record<string, number>>({});
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [pendingCoupon, setPendingCoupon] = useState<Coupon | null>(null);
+
   const cart = shopId ? carts[shopId] : null;
-  const orderAmount = shopId ? getCartTotal(shopId) : 0;
+  const subtotal = shopId ? getCartTotal(shopId) : 0;
+
+  // Calculate discount
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.discount_type === 'percentage') {
+      return (subtotal * appliedCoupon.discount_value) / 100;
+    }
+    return Math.min(appliedCoupon.discount_value, subtotal);
+  }, [appliedCoupon, subtotal]);
+
+  const orderAmount = subtotal - discountAmount;
   const fees = calculateFees(orderAmount);
   const total = fees.totalPayable;
 
@@ -118,6 +146,77 @@ export default function ShopCart() {
 
     return totalMinutes;
   }, [cart, pendingOrderCount, menuItemPrepTimes]);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+
+    if (!shopId) return;
+
+    setIsApplyingCoupon(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from('coupons')
+        .select('*')
+        .eq('code', couponCode.trim().toUpperCase())
+        .eq('is_active', true)
+        .eq('shop_id', shopId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        toast.error('Invalid coupon code or not valid for this shop');
+        return;
+      }
+
+      // Check minimum amount requirement
+      if (data.minimum_amount && subtotal < data.minimum_amount) {
+        toast.error(`Order must be at least ₹${data.minimum_amount} to use this coupon`);
+        return;
+      }
+
+      const coupon = data as Coupon;
+
+      // Check if this is "Happynings" and if user needs verification
+      const isHappynings = cart?.shopName.toLowerCase().includes('happynings');
+      if (isHappynings && profile?.is_abes_student && !profile?.is_abes_verified) {
+        setPendingCoupon(coupon);
+        setShowVerificationModal(true);
+        return;
+      }
+
+      setAppliedCoupon(coupon);
+      setCouponCode('');
+      toast.success(`Coupon applied! You saved ₹${(data.discount_type === 'percentage'
+        ? (subtotal * data.discount_value) / 100
+        : data.discount_value).toFixed(0)}`);
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      toast.error('Failed to apply coupon');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    toast.success('Coupon removed');
+  };
+
+  const handleVerificationSuccess = async () => {
+    // Update local profile state if needed, but the modal already handled the db update
+    if (pendingCoupon) {
+      setAppliedCoupon(pendingCoupon);
+      setPendingCoupon(null);
+      setCouponCode('');
+      toast.success(`Coupon applied! You saved ₹${(pendingCoupon.discount_type === 'percentage'
+        ? (subtotal * pendingCoupon.discount_value) / 100
+        : pendingCoupon.discount_value).toFixed(0)}`);
+    }
+  };
 
   // Load Cashfree SDK
   useEffect(() => {
@@ -194,7 +293,7 @@ export default function ShopCart() {
         });
 
       // Create order with pending payment status and fee breakdown
-      const { data: order, error: orderError } = await supabase
+      const { data: order, error: orderError } = await (supabase as any)
         .from('shop_orders')
         .insert({
           user_id: user.id,
@@ -210,7 +309,9 @@ export default function ShopCart() {
           status: 'pending',
           payment_status: 'pending',
           estimated_ready_time: etaData || null,
-          order_no: orderNo || 1
+          order_no: orderNo || 1,
+          coupon_id: appliedCoupon?.id || null,
+          discount_amount: discountAmount
         })
         .select()
         .single();
@@ -437,6 +538,52 @@ export default function ShopCart() {
 
             <Card>
               <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Ticket className="w-5 h-5 text-primary" />
+                  Coupons
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                    <div>
+                      <p className="font-bold text-primary">{appliedCoupon.code}</p>
+                      <p className="text-xs text-muted-foreground">Coupon applied</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveCoupon}
+                      className="text-destructive h-8 px-2 hover:bg-destructive/10"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        placeholder="Apply code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="rounded-xl border-gray-100"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleApplyCoupon}
+                      disabled={isApplyingCoupon || !couponCode.trim()}
+                      variant="secondary"
+                      className="rounded-xl px-4"
+                    >
+                      {isApplyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Order Summary</CardTitle>
                   {estimatedTime > 0 && (
@@ -493,6 +640,15 @@ export default function ShopCart() {
           </div>
         </div>
       </div>
+
+      <CollegeVerificationModal
+        isOpen={showVerificationModal}
+        onClose={() => {
+          setShowVerificationModal(false);
+          setPendingCoupon(null);
+        }}
+        onVerified={handleVerificationSuccess}
+      />
     </div>
   );
 }

@@ -42,7 +42,13 @@ import { useCollegeLocation } from '@/hooks/useCollegeLocation';
 import { useOrderRejectionNotifications } from '@/hooks/useOrderRejectionNotifications';
 import { useShopOrderOverdueNotification } from '@/hooks/useShopOrderOverdueNotification';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { Store, Bell, Clock, LogOut, Building2, MapPin, MapPinOff, Wallet as WalletIcon } from 'lucide-react';
+import { Store, Bell, Clock, LogOut, Building2, MapPin, MapPinOff, Wallet as WalletIcon, Mail, ShieldCheck, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 import preorderLogo from '@/assets/preorder-logo.jpg';
 
 
@@ -153,7 +159,6 @@ export default function StudentDashboard() {
   // Check college affiliation on mount
   useEffect(() => {
     if (user && profile && profile.is_abes_student === null) {
-      // Check if we should show the modal (only once)
       setShowAffiliationModal(true);
     }
   }, [user, profile]);
@@ -162,6 +167,8 @@ export default function StudentDashboard() {
     setShowAffiliationModal(false);
     await updateProfile({ is_abes_student: isAbesStudent });
   };
+
+
 
   // Request notification permissions
   useEffect(() => {
@@ -494,14 +501,20 @@ export default function StudentDashboard() {
             </Button>
           </div>
 
-          {/* Affiliation Dialog */}
-          <AlertDialog open={showAffiliationModal} onOpenChange={setShowAffiliationModal}>
+          {/* Affiliation & Verification Dialog */}
+          <AlertDialog open={showAffiliationModal} onOpenChange={(open) => {
+            // Only allow closing if already verified or non-student
+            if (profile?.is_abes_verified || profile?.is_abes_student === false) {
+              setShowAffiliationModal(open);
+            }
+          }}>
             <AlertDialogContent className="max-w-[90vw] w-[400px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
               <div className="bg-gradient-to-br from-mcd-red to-red-700 p-6 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                 <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-24 h-24 bg-black/10 rounded-full blur-xl"></div>
                 <div className="relative z-10">
                   <Building2 className="w-12 h-12 mb-4 text-mcd-yellow animate-bounce" />
+
                   <AlertDialogTitle className="text-2xl font-black tracking-tight leading-tight">
                     Welcome to <span className="text-mcd-yellow">Preorder!</span>
                   </AlertDialogTitle>
@@ -510,6 +523,7 @@ export default function StudentDashboard() {
                   </AlertDialogDescription>
                 </div>
               </div>
+
               <div className="p-6 bg-white space-y-4">
                 <div className="grid grid-cols-1 gap-3">
                   <Button
@@ -528,6 +542,7 @@ export default function StudentDashboard() {
                     <Store className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   </Button>
                 </div>
+
                 <p className="text-[10px] text-center text-gray-400 font-medium">
                   This choice will help us show you relevant canteens and shops.
                 </p>

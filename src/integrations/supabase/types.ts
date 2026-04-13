@@ -199,6 +199,7 @@ export type Database = {
           id: string
           is_active: boolean
           minimum_amount: number | null
+          shop_id: string | null
           updated_at: string
           vendor_id: string | null
         }
@@ -1004,6 +1005,8 @@ export type Database = {
           qr_token: string | null
           qr_used: boolean
           shop_id: string
+          coupon_id: string | null
+          discount_amount: number
           status: string
           total: number
           updated_at: string
@@ -1027,6 +1030,8 @@ export type Database = {
           qr_token?: string | null
           qr_used?: boolean
           shop_id: string
+          coupon_id?: string | null
+          discount_amount?: number
           status?: string
           total: number
           updated_at?: string
@@ -1050,6 +1055,8 @@ export type Database = {
           qr_token?: string | null
           qr_used?: boolean
           shop_id?: string
+          coupon_id?: string | null
+          discount_amount?: number
           status?: string
           total?: number
           updated_at?: string
