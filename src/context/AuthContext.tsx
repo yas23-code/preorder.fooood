@@ -12,6 +12,7 @@ interface Profile {
   role: UserRole;
   phone?: string | null;
   wallet_balance?: number;
+  is_abes_student?: boolean | null;
   created_at: string;
   updated_at: string;
 }

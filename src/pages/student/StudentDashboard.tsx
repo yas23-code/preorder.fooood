@@ -22,6 +22,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useReadyOrderNotifications } from '@/hooks/useReadyOrderNotifications';
@@ -51,7 +61,8 @@ export default function StudentDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [canteens, setCanteens] = useState<Canteen[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { logout, user } = useAuth();
+  const { logout, user, profile, updateProfile } = useAuth();
+  const [showAffiliationModal, setShowAffiliationModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -139,6 +150,19 @@ export default function StudentDashboard() {
     checkBanStatus();
   }, [user]);
 
+  // Check college affiliation on mount
+  useEffect(() => {
+    if (user && profile && profile.is_abes_student === null) {
+      // Check if we should show the modal (only once)
+      setShowAffiliationModal(true);
+    }
+  }, [user, profile]);
+
+  const handleAffiliationSelection = async (isAbesStudent: boolean) => {
+    setShowAffiliationModal(false);
+    await updateProfile({ is_abes_student: isAbesStudent });
+  };
+
   // Request notification permissions
   useEffect(() => {
     const hasPrompted = sessionStorage.getItem('notification_prompted');
@@ -205,6 +229,12 @@ export default function StudentDashboard() {
 
   // Filter canteens based on search and location
   const filteredCanteens = useMemo(() => {
+    // If user is not an ABES student, they shouldn't see canteens at all
+    if (profile?.is_abes_student === false) {
+      return [];
+    }
+
+    // Existing location-based filtering for ABES students or undecided
     // If user is outside campus and location restriction is active, show no canteens
     // BUT only if nearby shops are enabled. If nearby shops are disabled, we always show canteens.
     if (isInsideCampus === false && collegeConfig?.is_active && showNearbyShops) {
@@ -218,7 +248,7 @@ export default function StudentDashboard() {
         canteen.name.toLowerCase().includes(query) ||
         canteen.location.toLowerCase().includes(query)
     );
-  }, [searchQuery, canteens, isInsideCampus, collegeConfig, showNearbyShops]);
+  }, [searchQuery, canteens, isInsideCampus, collegeConfig, showNearbyShops, profile?.is_abes_student]);
 
   const handleLogout = async () => {
     await logout();
@@ -464,58 +494,112 @@ export default function StudentDashboard() {
             </Button>
           </div>
 
-          {/* Location-Aware Content - Single Section Based on Location */}
+          {/* Affiliation Dialog */}
+          <AlertDialog open={showAffiliationModal} onOpenChange={setShowAffiliationModal}>
+            <AlertDialogContent className="max-w-[90vw] w-[400px] rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
+              <div className="bg-gradient-to-br from-mcd-red to-red-700 p-6 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-24 h-24 bg-black/10 rounded-full blur-xl"></div>
+                <div className="relative z-10">
+                  <Building2 className="w-12 h-12 mb-4 text-mcd-yellow animate-bounce" />
+                  <AlertDialogTitle className="text-2xl font-black tracking-tight leading-tight">
+                    Welcome to <span className="text-mcd-yellow">Preorder!</span>
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-red-50 text-base mt-2 font-medium">
+                    Please help us customize your experience. Are you a student of ABES Engineering College?
+                  </AlertDialogDescription>
+                </div>
+              </div>
+              <div className="p-6 bg-white space-y-4">
+                <div className="grid grid-cols-1 gap-3">
+                  <Button
+                    onClick={() => handleAffiliationSelection(true)}
+                    className="w-full h-14 rounded-xl bg-mcd-red hover:bg-red-600 text-white font-bold text-lg shadow-lg hover:shadow-red-200 transition-all flex items-center justify-between px-6 group"
+                  >
+                    <span>Yes, I am an ABES student</span>
+                    <Building2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleAffiliationSelection(false)}
+                    className="w-full h-14 rounded-xl border-2 border-gray-100 hover:bg-gray-50 text-gray-700 font-bold text-lg flex items-center justify-between px-6 group"
+                  >
+                    <span>No, I am not</span>
+                    <Store className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-center text-gray-400 font-medium">
+                  This choice will help us show you relevant canteens and shops.
+                </p>
+              </div>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Location-Aware Content - Render sections based on affiliation and location */}
           {isLocationLoading ? (
             <div className="flex justify-center py-12">
               <LoadingSpinner text="Detecting your location..." />
             </div>
-          ) : !showNearbyShops || isInsideCampus === true || isInsideCampus === null ? (
-            /* Inside Campus (or nearby shops disabled) - Show ONLY Canteens */
-            <div className="space-y-4">
+          ) : (
+            <div className="space-y-8">
+              {/* College Canteens Section - Show only to ABES students */}
+              {profile?.is_abes_student === true && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
+                    <Building2 className="w-5 h-5 text-mcd-red" />
+                    <h2 className="font-bold text-lg text-foreground">College Canteens</h2>
+                  </div>
 
-
-              {/* Section Header */}
-              <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
-                <Building2 className="w-5 h-5 text-mcd-red" />
-                <h2 className="font-bold text-lg text-foreground">College Canteens</h2>
-              </div>
-
-              {isLoading ? (
-                <div className="flex justify-center py-12">
-                  <LoadingSpinner text="Loading canteens..." />
+                  {isLoading ? (
+                    <div className="flex justify-center py-12">
+                      <LoadingSpinner text="Loading canteens..." />
+                    </div>
+                  ) : filteredCanteens.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {filteredCanteens.map((canteen, index) => (
+                        <CanteenCardWithCapacity
+                          key={canteen.id}
+                          canteen={canteen}
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6">
+                      <EmptyState
+                        icon={MapPinOff}
+                        title={isInsideCampus === false ? "Outside Campus Limits" : "No canteens found"}
+                        description={isInsideCampus === false ? "College canteens are only available when you are on campus." : "Canteens will appear here once vendors register"}
+                      />
+                    </div>
+                  )}
                 </div>
-              ) : filteredCanteens.length > 0 ? (
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredCanteens.map((canteen, index) => (
-                    <CanteenCardWithCapacity
-                      key={canteen.id}
-                      canteen={canteen}
-                      index={index}
-                    />
-                  ))}
+              )}
+
+              {/* Nearby Shops Section - Shown to everyone (Nearby Shops are enabled globally in config) */}
+              {showNearbyShops && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
+                    <MapPin className="w-5 h-5 text-mcd-red" />
+                    <h2 className="font-bold text-lg text-foreground">Nearby Shops</h2>
+                  </div>
+
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm">
+                    <NearbyShopsSection />
+                  </div>
                 </div>
-              ) : (
+              )}
+
+              {/* Special Empty State if no affiliation selected yet or nothing to show */}
+              {profile?.is_abes_student === false && !showNearbyShops && (
                 <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6">
                   <EmptyState
                     icon={Store}
-                    title={searchQuery ? "No canteens found" : "No canteens yet"}
-                    description={searchQuery ? "Try adjusting your search query" : "Canteens will appear here once vendors register"}
+                    title="Nothing found"
+                    description="There are no nearby shops or canteens available for you at the moment."
                   />
                 </div>
               )}
-            </div>
-          ) : (
-            /* Outside Campus - Show ONLY Nearby Shops */
-            <div className="space-y-4">
-              {/* Section Header */}
-              <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
-                <MapPin className="w-5 h-5 text-mcd-red" />
-                <h2 className="font-bold text-lg text-foreground">Nearby Shops</h2>
-              </div>
-
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm">
-                <NearbyShopsSection />
-              </div>
             </div>
           )}
         </main>

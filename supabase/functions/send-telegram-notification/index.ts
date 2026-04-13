@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
         }
 
         // Log the sent notification
-        await supabase.from('telegram_notifications').insert({
+        await supabase.from('telegram_notifications_sent').insert({
             user_id,
             order_id,
             message_id: String(telegramResult.result?.message_id || ''),

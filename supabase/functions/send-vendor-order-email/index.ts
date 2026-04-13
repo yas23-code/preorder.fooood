@@ -103,6 +103,38 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Check if notification already sent for this order (prevent duplicates)
+    const { data: existingNotification, error: checkError } = await supabase
+      .from('vendor_notifications_sent')
+      .select('id')
+      .eq('order_id', order_id)
+      .maybeSingle()
+
+    if (checkError) {
+      console.error('Error checking existing vendor notification:', checkError)
+    }
+
+    if (existingNotification) {
+      console.log(`Vendor notification already sent for order ${order_id}, skipping to prevent duplicates`)
+      return new Response(
+        JSON.stringify({ success: true, message: 'Vendor notification already sent' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Record notification sent immediately to prevent race conditions during long-running email/SMS/Telegram tasks
+    const { error: insertError } = await supabase
+      .from('vendor_notifications_sent')
+      .insert({ order_id })
+
+    if (insertError) {
+      console.error('Failed to record vendor notification sent (might be a concurrent request):', insertError)
+      return new Response(
+        JSON.stringify({ success: true, message: 'Vendor notification already being processed or sent' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Get customer details
     const { data: customer, error: customerError } = await supabase
       .from('profiles')

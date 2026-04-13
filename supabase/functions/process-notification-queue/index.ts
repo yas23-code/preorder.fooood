@@ -50,6 +50,32 @@ Deno.serve(async (req) => {
         let telegramSent = false
         let emailSent = false
         let webPushSent = false
+        let fcmSent = false
+
+        // Send Mobile FCM notification
+        try {
+          const fcmResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-fcm-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+            },
+            body: JSON.stringify({
+              user_id: notification.user_id,
+              title: notification.title || 'preorder.food',
+              body: notification.message,
+              data: {
+                order_id: notification.order_id,
+                url: `/student/orders`
+              }
+            })
+          })
+          const fcmResult = await fcmResponse.json()
+          console.log('FCM notification result:', fcmResult)
+          fcmSent = fcmResponse.ok && fcmResult.success
+        } catch (fcmError) {
+          console.log('FCM notification failed:', fcmError)
+        }
 
         // Send Web Push notification
         try {
@@ -126,13 +152,14 @@ Deno.serve(async (req) => {
 
         results.push({
           id: notification.id,
-          success: telegramSent || emailSent || webPushSent,
+          success: telegramSent || emailSent || webPushSent || fcmSent,
           telegramSent,
           emailSent,
-          webPushSent
+          webPushSent,
+          fcmSent
         })
 
-        console.log(`Notification ${notification.id} processed - Telegram: ${telegramSent}, Email: ${emailSent}, WebPush: ${webPushSent}`)
+        console.log(`Notification ${notification.id} processed - Telegram: ${telegramSent}, Email: ${emailSent}, WebPush: ${webPushSent}, FCM: ${fcmSent}`)
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         console.error(`Failed to process notification ${notification.id}:`, errorMessage)

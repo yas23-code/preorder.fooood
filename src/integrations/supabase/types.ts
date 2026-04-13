@@ -731,6 +731,7 @@ export type Database = {
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_id: string | null
+          is_abes_student: boolean | null
           updated_at: string
         }
         Insert: {
@@ -741,6 +742,7 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_id?: string | null
+          is_abes_student?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -751,6 +753,7 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_id?: string | null
+          is_abes_student?: boolean | null
           updated_at?: string
         }
         Relationships: []
