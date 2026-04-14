@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 interface ReportData {
   totalOrders: number;
   totalRevenue: number;
+  totalPlatformFees: number;
   completedOrders: number;
   pendingOrders: number;
 }
@@ -42,12 +43,14 @@ export function DailyCollectionReport() {
         const totalOrders = orders?.length || 0;
         // Show actual food revenue (total minus platform fee)
         const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total) - Number((order as any).platform_fee || 0), 0) || 0;
+        const totalPlatformFees = orders?.reduce((sum, order) => sum + Number((order as any).platform_fee || 0), 0) || 0;
         const completedOrders = orders?.filter(o => o.status === 'completed').length || 0;
         const pendingOrders = orders?.filter(o => o.status === 'pending' || o.status === 'ready').length || 0;
 
         setReportData({
           totalOrders,
           totalRevenue,
+          totalPlatformFees,
           completedOrders,
           pendingOrders,
         });
@@ -88,14 +91,24 @@ export function DailyCollectionReport() {
         {isLoading ? (
           <LoadingSpinner text="Loading report..." />
         ) : reportData ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card className="bg-primary/10">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 text-primary mb-2">
                   <IndianRupee className="h-5 w-5" />
-                  <span className="text-sm font-medium">Total Revenue</span>
+                  <span className="text-sm font-medium">Food Revenue</span>
                 </div>
                 <p className="text-2xl font-bold">₹{reportData.totalRevenue.toFixed(0)}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-purple-500/10">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 text-purple-600 mb-2">
+                  <TrendingUp className="h-5 w-5" />
+                  <span className="text-sm font-medium">Platform Fees</span>
+                </div>
+                <p className="text-2xl font-bold">₹{reportData.totalPlatformFees.toFixed(0)}</p>
               </CardContent>
             </Card>
 

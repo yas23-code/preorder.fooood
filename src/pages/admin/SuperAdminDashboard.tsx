@@ -7,6 +7,7 @@ import { StudentDetailView } from '@/components/admin/StudentDetailView';
 import { CanteenDetailView } from '@/components/admin/CanteenDetailView';
 import { DailyCollectionReport } from '@/components/admin/DailyCollectionReport';
 import { MonthlyIncomeReport } from '@/components/admin/MonthlyIncomeReport';
+import { PlatformFeeReport } from '@/components/admin/PlatformFeeReport';
 import { BannedEntitiesList } from '@/components/admin/BannedEntitiesList';
 import { CollegeConfigManager } from '@/components/admin/CollegeConfigManager';
 import { PendingShopApprovals } from '@/components/admin/PendingShopApprovals';
@@ -79,6 +80,9 @@ export default function SuperAdminDashboard() {
 
             {/* Monthly Report */}
             <MonthlyIncomeReport />
+
+            {/* Platform Fees Report */}
+            <PlatformFeeReport />
 
             {/* Daily Report */}
             <DailyCollectionReport />
