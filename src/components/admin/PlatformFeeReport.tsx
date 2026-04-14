@@ -16,7 +16,7 @@ interface EntityFee {
 
 // Set this date to filter out legacy platform fee revenue
 // Format: 'YYYY-MM-DD'
-const PLATFORM_FEE_RESET_DATE = '2026-04-15';
+const PLATFORM_FEE_RESET_DATE = '2026-04-16';
 
 export function PlatformFeeReport() {
     const [feeData, setFeeData] = useState<EntityFee[]>([]);
