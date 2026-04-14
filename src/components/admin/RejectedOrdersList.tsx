@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, RefreshCw, Copy, Check } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw, Copy, Check, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -135,6 +135,32 @@ export function RejectedOrdersList() {
     });
   };
 
+  const handleMarkAsRefunded = async (orderId: string) => {
+    if (!window.confirm('Mark this order as refunded? It will be removed from this list.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ payment_status: 'refunded' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      toast({
+        title: 'Order processed',
+        description: 'Order has been marked as refunded and removed from the list.',
+      });
+    } catch (error) {
+      console.error('Error marking order as refunded:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order status',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -217,26 +243,37 @@ export function RejectedOrdersList() {
                     <div className="text-xl font-bold text-destructive">
                       ₹{order.total.toFixed(2)}
                     </div>
-                    {order.payment_id && (
+                    <div className="flex gap-2">
+                      {order.payment_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => copyToClipboard(order.payment_id!, order.id)}
+                        >
+                          {copiedId === order.id ? (
+                            <>
+                              <Check className="h-3 w-3 mr-1" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copy ID
+                            </>
+                          )}
+                        </Button>
+                      )}
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="text-xs"
-                        onClick={() => copyToClipboard(order.payment_id!, order.id)}
+                        className="text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                        onClick={() => handleMarkAsRefunded(order.id)}
+                        title="Mark as Refunded"
                       >
-                        {copiedId === order.id ? (
-                          <>
-                            <Check className="h-3 w-3 mr-1" />
-                            Copied
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copy Payment ID
-                          </>
-                        )}
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
