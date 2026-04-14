@@ -92,7 +92,7 @@ export default function Membership() {
             name: 'Pro',
             price: 35,
             orders: 5,
-            validity: '1 month',
+            validity: '1 week',
             popular: true,
             color: 'border-amber-400 shadow-amber-100',
             bgColor: 'bg-amber-50/30'
@@ -150,13 +150,11 @@ export default function Membership() {
                                                 <p className="text-sm text-muted-foreground mt-1">
                                                     ✔ Free packing on <span className="font-bold text-foreground">{plan.orders} orders</span>
                                                 </p>
-                                                {plan.id === 'basic' && (
-                                                    <p className="text-xs text-muted-foreground mt-1 italic">
-                                                        ✔ Valid for 1 week
-                                                    </p>
-                                                )}
+                                                <p className="text-xs text-muted-foreground mt-1 italic">
+                                                    ✔ Valid for {plan.validity}
+                                                </p>
                                                 {plan.id === 'pro' && (
-                                                    <p className="text-xs text-muted-foreground mt-1 italic font-medium text-amber-600">
+                                                    <p className="text-xs font-medium text-amber-600 mt-0.5">
                                                         ✔ Best value for regular buyers
                                                     </p>
                                                 )}
