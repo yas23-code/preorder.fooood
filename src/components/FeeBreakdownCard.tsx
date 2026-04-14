@@ -6,9 +6,11 @@ interface FeeBreakdownCardProps {
   showNetProfit?: boolean;
   discount?: number;
   membershipDiscount?: number;
+  gstAmount?: number;
+  packingCharge?: number;
 }
 
-export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, membershipDiscount = 0 }: FeeBreakdownCardProps) {
+export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, membershipDiscount = 0, gstAmount = 0, packingCharge = 0 }: FeeBreakdownCardProps) {
   // Separate coupon discount from membership discount
   const couponDiscount = discount - membershipDiscount;
 
@@ -64,6 +66,20 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, me
             <span className="text-green-600 font-medium">₹{fees.netProfit.toFixed(2)}</span>
           </div>
         </>
+      )}
+
+      {gstAmount > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">GST (5%)</span>
+          <span className="text-foreground">₹{gstAmount.toFixed(2)}</span>
+        </div>
+      )}
+
+      {packingCharge > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Packing Charges</span>
+          <span className="text-foreground">₹{packingCharge.toFixed(2)}</span>
+        </div>
       )}
 
       <div className="flex items-center justify-between pt-2 border-t border-border">

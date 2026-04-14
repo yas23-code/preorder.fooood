@@ -136,7 +136,11 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
           <h3 className="text-xl font-bold font-display text-foreground">
             {customerName || 'Customer'}
           </h3>
-          <p className="text-muted-foreground">₹{(Number(order.total) - Number((order as any).platform_fee || 0)).toFixed(0)}</p>
+          <p className="text-muted-foreground">
+            ₹{(Number(order.total) - Number((order as any).platform_fee || 0) - Number(order.gst_amount || 0)).toFixed(2)}
+            {order.packing_charge ? <span className="text-[10px] ml-1">(inc. ₹{order.packing_charge} packing)</span> : ''}
+            {order.gst_amount ? <span className="text-[10px] ml-1">(inc. ₹{order.gst_amount} GST)</span> : ''}
+          </p>
         </div>
         {order.order_no && (
           <div className="flex flex-col items-end gap-1.5">

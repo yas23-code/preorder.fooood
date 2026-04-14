@@ -42,6 +42,7 @@ export interface MenuItem {
   image_url: string | null;
   is_available: boolean;
   prep_time?: number | null;
+  packing_charge?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +62,8 @@ export interface Order {
   qr_used?: boolean;
   order_no?: number | null;
   order_type?: 'dine_in' | 'takeaway';
+  packing_charge?: number;
+  gst_amount?: number;
   created_at: string;
   updated_at: string;
   canteen?: Canteen;

@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, Plus, Pencil, Trash2, UtensilsCrossed, Upload, X, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { MenuItem, Category } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -20,26 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-interface MenuItem {
-  id: string;
-  canteen_id: string;
-  category: string;
-  name: string;
-  description: string | null;
-  price: number;
-  image_url: string | null;
-  is_available: boolean;
-  prep_time: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Category {
-  id: string;
-  canteen_id: string;
-  name: string;
-}
 
 export default function MenuManagement() {
   const { user } = useAuth();
@@ -60,6 +41,7 @@ export default function MenuManagement() {
   const [formPrice, setFormPrice] = useState('');
   const [formCategory, setFormCategory] = useState('');
   const [formPrepTime, setFormPrepTime] = useState('');
+  const [formPackingCharge, setFormPackingCharge] = useState('');
   const [formAvailable, setFormAvailable] = useState(true);
   const [formImage, setFormImage] = useState<File | null>(null);
   const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
@@ -74,6 +56,7 @@ export default function MenuManagement() {
   const [editPrice, setEditPrice] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editPrepTime, setEditPrepTime] = useState('');
+  const [editPackingCharge, setEditPackingCharge] = useState('');
   const [editAvailable, setEditAvailable] = useState(true);
   const [editImage, setEditImage] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
@@ -103,7 +86,7 @@ export default function MenuManagement() {
         .order('category')
         .order('name');
 
-      setItems(itemsData || []);
+      setItems((itemsData as any) || []);
 
       const { data: categoriesData } = await supabase
         .from('categories')
@@ -204,6 +187,7 @@ export default function MenuManagement() {
     setFormPrice('');
     setFormCategory('');
     setFormPrepTime('');
+    setFormPackingCharge('');
     setFormAvailable(true);
     clearAddImage();
     clearCategoryImage();
@@ -296,6 +280,7 @@ export default function MenuManagement() {
           description: formDescription?.trim() || null,
           price: parseFloat(formPrice),
           prep_time: formPrepTime ? parseInt(formPrepTime) : null,
+          packing_charge: formPackingCharge ? parseFloat(formPackingCharge) : null,
           is_available: formAvailable,
         })
         .select()
@@ -317,7 +302,7 @@ export default function MenuManagement() {
         if (updateError) throw updateError;
       }
 
-      setItems(prev => [...prev, { ...data, image_url: imageUrl }]);
+      setItems(prev => [...prev, (data as any)]);
       toast.success('Item added successfully');
       resetAddForm();
     } catch (error) {
@@ -335,6 +320,7 @@ export default function MenuManagement() {
     setEditPrice(item.price.toString());
     setEditCategory(item.category);
     setEditPrepTime(item.prep_time ? item.prep_time.toString() : '');
+    setEditPackingCharge(item.packing_charge ? item.packing_charge.toString() : '');
     setEditAvailable(item.is_available);
     setEditImage(null);
     setEditImagePreview(item.image_url);
@@ -368,6 +354,7 @@ export default function MenuManagement() {
           price: parseFloat(editPrice),
           category: trimmedCategory,
           prep_time: editPrepTime ? parseInt(editPrepTime) : null,
+          packing_charge: editPackingCharge ? parseFloat(editPackingCharge) : null,
           is_available: editAvailable,
           image_url: imageUrl,
         })
@@ -385,6 +372,7 @@ export default function MenuManagement() {
               price: parseFloat(editPrice),
               category: trimmedCategory,
               prep_time: editPrepTime ? parseInt(editPrepTime) : null,
+              packing_charge: editPackingCharge ? parseFloat(editPackingCharge) : null,
               is_available: editAvailable,
               image_url: imageUrl,
             }
@@ -667,19 +655,34 @@ export default function MenuManagement() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="item-prep-time" className="text-mcd-text font-medium">Prep Time (mins)</Label>
+                  <Label htmlFor="item-packing-charge" className="text-mcd-text font-medium">Packing Charge (₹)</Label>
                   <Input
-                    id="item-prep-time"
+                    id="item-packing-charge"
                     type="number"
-                    value={formPrepTime}
-                    onChange={(e) => setFormPrepTime(e.target.value)}
-                    placeholder="Auto"
-                    min="1"
-                    max="120"
+                    value={formPackingCharge}
+                    onChange={(e) => setFormPackingCharge(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="0.5"
                     className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
                   />
-                  <p className="text-xs text-muted-foreground">Leave empty for auto</p>
+                  <p className="text-xs text-muted-foreground">Added to cart total</p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="item-prep-time" className="text-mcd-text font-medium">Prep Time (mins)</Label>
+                <Input
+                  id="item-prep-time"
+                  type="number"
+                  value={formPrepTime}
+                  onChange={(e) => setFormPrepTime(e.target.value)}
+                  placeholder="Auto"
+                  min="1"
+                  max="120"
+                  className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
+                />
+                <p className="text-xs text-muted-foreground">Leave empty for auto</p>
               </div>
 
               {/* Image Upload */}
@@ -801,7 +804,7 @@ export default function MenuManagement() {
                       <div className="p-4 flex items-start justify-between">
                         <div>
                           <h3 className="font-bold text-foreground">{item.name}</h3>
-                          <p className="text-muted-foreground">₹{item.price.toFixed(2)}</p>
+                          <p className="text-muted-foreground">₹{item.price.toFixed(2)}{item.packing_charge ? ` + ₹${item.packing_charge} packing` : ''}</p>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -910,19 +913,35 @@ export default function MenuManagement() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-prep-time" className="text-mcd-text font-medium">Prep Time (mins)</Label>
-              <Input
-                id="edit-prep-time"
-                type="number"
-                value={editPrepTime}
-                onChange={(e) => setEditPrepTime(e.target.value)}
-                placeholder="Auto (based on category)"
-                min="1"
-                max="120"
-                className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
-              />
-              <p className="text-xs text-muted-foreground">Leave empty to use category default</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-packing-charge" className="text-mcd-text font-medium">Packing Charge (₹)</Label>
+                <Input
+                  id="edit-packing-charge"
+                  type="number"
+                  value={editPackingCharge}
+                  onChange={(e) => setEditPackingCharge(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.5"
+                  className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-prep-time" className="text-mcd-text font-medium">Prep Time (mins)</Label>
+                <Input
+                  id="edit-prep-time"
+                  type="number"
+                  value={editPrepTime}
+                  onChange={(e) => setEditPrepTime(e.target.value)}
+                  placeholder="Auto"
+                  min="1"
+                  max="120"
+                  className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
+                />
+                <p className="text-xs text-muted-foreground">Leave empty for auto</p>
+              </div>
             </div>
 
             {/* Edit Image Upload */}

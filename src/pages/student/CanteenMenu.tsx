@@ -299,7 +299,7 @@ export default function CanteenMenu() {
     );
   }
 
-  const isComingSoon = canteen?.name.toLowerCase().includes('gauri cafe') || canteen?.name.toLowerCase().includes('happynings');
+  const isComingSoon = canteen?.name.toLowerCase().includes('happynings');
 
   if (isComingSoon) {
     return (

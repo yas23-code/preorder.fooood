@@ -19,11 +19,19 @@ export interface FeeBreakdown {
 export function calculateFees(orderAmount: number): FeeBreakdown {
   const roundTo2 = (n: number) => Math.round(n * 100) / 100;
 
+  // Platform fee tiers based on order amount
+  let platformFee = 0;
+  if (orderAmount >= 50 && orderAmount <= 69) {
+    platformFee = 3;
+  } else if (orderAmount >= 70 && orderAmount <= 100) {
+    platformFee = 2.5;
+  }
+
   return {
     orderAmount: roundTo2(orderAmount),
-    platformFee: 0,
+    platformFee,
     pgFee: 0,
-    netProfit: 0,
-    totalPayable: roundTo2(orderAmount),
+    netProfit: platformFee,
+    totalPayable: roundTo2(orderAmount + platformFee),
   };
 }

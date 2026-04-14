@@ -279,16 +279,25 @@ export default function Cart() {
   const totalDiscount = discount + membershipDiscountAmount;
   const discountedAmount = Math.max(subtotal - totalDiscount, 0);
 
-  // When using wallet, we bypass PG fees and keep platform fee internal
-  // For now, let's keep it simple: if wallet, pgFee = 0, platformFee = 0 (as per the prompt: "every order paid from the wallet bypasses Cashfree entirely — that's your ₹3 platform fee gone")
-  // Actually, the prompt says "bypasses Cashfree entirely — that's your ₹3 platform fee gone, which is the single biggest visible price difference. You keep the ₹3 internally, the student doesn't see it on checkout."
-  // Wait, if the student doesn't see it, it means it's not added to the total?
-  // "This one feature can cut the price gap by ₹3-5 per order immediately."
-  // So for wallet, total = discountedAmount. No fees.
+  // Check if this is Gauri Cafe — apply 5% GST
+  const isGauriCafe = canteenName?.toLowerCase().includes('gauri cafe') || false;
+  const gstRate = isGauriCafe ? 0.05 : 0;
+  const gstAmount = Math.round(discountedAmount * gstRate * 100) / 100;
+
+  // Calculate total packing charges
+  const totalPackingCharge = items.reduce((sum, item) => {
+    return sum + ((item.menuItem.packing_charge || 0) * item.quantity);
+  }, 0);
 
   const fees = useMemo(() => {
-    return calculateFees(discountedAmount);
-  }, [discountedAmount, paymentMethod]);
+    const baseFees = calculateFees(discountedAmount + totalPackingCharge);
+    // Add GST on top of the total (GST should be on food items, packing charges might or might not have GST but usually food tax is separate)
+    // We'll keep GST on discounted food amount as calculated above
+    return {
+      ...baseFees,
+      totalPayable: Math.round((baseFees.totalPayable + gstAmount) * 100) / 100,
+    };
+  }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod]);
 
   const total = fees.totalPayable;
 
@@ -448,6 +457,8 @@ export default function Cart() {
           platform_fee: fees.platformFee,
           pg_fee: fees.pgFee,
           net_profit: fees.netProfit,
+          gst_amount: gstAmount,
+          packing_charge: totalPackingCharge,
           status: 'pending',
           pickup_code: code,
           payment_status: 'pending',
@@ -496,7 +507,7 @@ export default function Cart() {
           }
 
           toast.success('Order placed successfully using wallet!');
-          
+
           // Send email notification to vendor for wallet payment
           try {
             console.log('Sending email notification to vendor for wallet order...');
@@ -789,7 +800,13 @@ export default function Cart() {
 
           {/* Price Summary with Fee Breakdown */}
           <div className="py-3 border-t border-mcd-border">
-            <FeeBreakdownCard fees={fees} discount={totalDiscount} membershipDiscount={membershipDiscountAmount} />
+            <FeeBreakdownCard
+              fees={fees}
+              discount={totalDiscount}
+              membershipDiscount={membershipDiscountAmount}
+              gstAmount={gstAmount}
+              packingCharge={totalPackingCharge}
+            />
           </div>
 
           <div className="mt-4 mb-4">
