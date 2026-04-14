@@ -289,15 +289,29 @@ export default function Cart() {
     return sum + ((item.menuItem.packing_charge || 0) * item.quantity);
   }, 0);
 
+  // Boys Hostel Canteen — override platform fee to ₹2 for orders ₹50-₹69
+  const isBoysHostelCanteen = canteenName?.toLowerCase().includes('boys hostel') || false;
+
   const fees = useMemo(() => {
     const baseFees = calculateFees(discountedAmount);
+
+    // Override platform fee for Boys Hostel Canteen (₹2 for ₹50-₹69 range)
+    let platformFee = baseFees.platformFee;
+    if (isBoysHostelCanteen && discountedAmount >= 50 && discountedAmount <= 69) {
+      platformFee = 2;
+    }
+
+    const adjustedTotalPayable = discountedAmount + platformFee;
+
     // Add GST and Packing Charges on top of the total
     return {
       ...baseFees,
+      platformFee,
+      netProfit: platformFee,
       orderAmount: discountedAmount, // Force display to match food price strictly
-      totalPayable: Math.round((baseFees.totalPayable + gstAmount + totalPackingCharge) * 100) / 100,
+      totalPayable: Math.round((adjustedTotalPayable + gstAmount + totalPackingCharge) * 100) / 100,
     };
-  }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod]);
+  }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod, isBoysHostelCanteen]);
 
   const total = fees.totalPayable;
 
