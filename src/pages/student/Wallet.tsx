@@ -192,6 +192,16 @@ export default function Wallet() {
                         </div>
                     </CardContent>
                 </Card>
+                
+                {/* Platform Fee Waiver Note */}
+                <div className="bg-green-50 border border-green-100 p-3 rounded-xl flex items-center gap-3 shadow-sm">
+                    <div className="bg-green-100 p-2 rounded-full">
+                        <IndianRupee className="h-4 w-4 text-green-600" />
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-green-800">
+                        Pro-tip: Pay using wallet and enjoy <span className="font-bold underline">ZERO</span> platform fees on all orders!
+                    </p>
+                </div>
 
                 {/* Top Up Section */}
                 <section className="space-y-4 relative">
