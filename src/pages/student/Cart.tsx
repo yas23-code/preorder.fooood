@@ -303,6 +303,11 @@ export default function Cart() {
       platformFee = 3;
     }
 
+    // Gauri Cafe — no platform fee when paying with wallet
+    if (isGauriCafe && paymentMethod === 'wallet') {
+      platformFee = 0;
+    }
+
     const adjustedTotalPayable = discountedAmount + platformFee;
 
     // Add GST and Packing Charges on top of the total
