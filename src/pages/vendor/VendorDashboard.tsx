@@ -336,7 +336,7 @@ export default function VendorDashboard() {
                       <div className="flex items-center gap-2">
                         <ShoppingBag className="h-4 w-4 text-white flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm leading-tight">{customerName} • ₹{Number(data.total).toFixed(0)}</p>
+                          <p className="font-semibold text-sm leading-tight">{customerName} • ₹{(Number(data.total) - Number(data.platform_fee || 0)).toFixed(0)}</p>
                           <p className="text-xs text-white/80 truncate">{itemsSummary}</p>
                         </div>
                         <span className="text-white/60 text-xs">×</span>

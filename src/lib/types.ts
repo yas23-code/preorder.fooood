@@ -64,6 +64,7 @@ export interface Order {
   order_type?: 'dine_in' | 'takeaway';
   packing_charge?: number;
   gst_amount?: number;
+  platform_fee?: number;
   created_at: string;
   updated_at: string;
   canteen?: Canteen;
