@@ -11,6 +11,7 @@ import { CanteenCardWithCapacity } from '@/components/CanteenCardWithCapacity';
 import { ActiveOrderBottomBar } from '@/components/ActiveOrderBottomBar';
 import { ActiveShopOrderBottomBar } from '@/components/ActiveShopOrderBottomBar';
 import { NearbyShopsSection } from '@/components/student/NearbyShopsSection';
+import { useMembership } from '@/hooks/useMembership';
 
 
 import { OrderRejectionBanner } from '@/components/OrderRejectionBanner';
@@ -74,6 +75,7 @@ export default function StudentDashboard() {
 
   // College location check for canteen visibility
   const { isInsideCampus, isLoading: isLocationLoading, collegeConfig, locationError, showNearbyShops, enableCampusMembership, enableWallet } = useCollegeLocation();
+  const { isActive } = useMembership();
 
   const searchPlaceholder = useRandomPlaceholder();
 
@@ -188,6 +190,33 @@ export default function StudentDashboard() {
       sessionStorage.setItem('notification_prompted', 'true');
     }
   }, [permission, user]);
+
+  // Membership reminder for users older than 1 week
+  useEffect(() => {
+    if (!user || isActive) return;
+
+    const registrationDate = new Date(profile?.created_at || (user as any).created_at);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - registrationDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays >= 7) {
+      const hasSeenReminder = localStorage.getItem(`mem_rem_${user.id}`);
+      if (!hasSeenReminder) {
+        setTimeout(() => {
+          toast("Enjoying Preorder? 🎓", {
+            description: "Join Campus Membership to save on every order with free packing!",
+            action: {
+              label: "Join Now",
+              onClick: () => navigate('/student/membership')
+            },
+            duration: 8000,
+          });
+          localStorage.setItem(`mem_rem_${user.id}`, 'true');
+        }, 3000);
+      }
+    }
+  }, [user, profile, isActive, navigate]);
 
   useEffect(() => {
     if (location.state?.orderSuccess) {
