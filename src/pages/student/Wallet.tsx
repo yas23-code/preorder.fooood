@@ -146,9 +146,10 @@ export default function Wallet() {
     };
 
     const getBonusText = (amount: number) => {
-        if (amount >= 500) return '10% Bonus';
-        if (amount >= 300) return '7% Bonus';
-        if (amount >= 200) return '5% Bonus';
+        if (amount >= 1000) return '25% Bonus';
+        if (amount >= 500) return '20% Bonus';
+        if (amount >= 300) return '15% Bonus';
+        if (amount >= 200) return '10% Bonus';
         return null;
     };
 
@@ -270,9 +271,10 @@ export default function Wallet() {
                         <div className="text-xs space-y-1">
                             <p className="font-bold text-mcd-yellow-700">Wallet Benefits</p>
                             <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                                <li>Load ₹200+ and get 5% bonus.</li>
-                                <li>Load ₹300+ and get 7% bonus (Save ₹21).</li>
-                                <li>Load ₹500+ and get 10% bonus (Save ₹50).</li>
+                                <li>Load ₹200+ and get 10% bonus.</li>
+                                <li>Load ₹300+ and get 15% bonus.</li>
+                                <li>Load ₹500+ and get 20% bonus.</li>
+                                <li>Load ₹1000+ and get 25% bonus.</li>
                                 <li>Zero platform fees on orders paid via wallet!</li>
                             </ul>
                         </div>
