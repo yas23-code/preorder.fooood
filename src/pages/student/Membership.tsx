@@ -54,33 +54,49 @@ export default function Membership() {
 
     const benefits = [
         {
-            icon: Sparkles,
-            title: '₹5 Flat Discount',
-            description: 'Get ₹5 off on every preorder of ₹70 or more',
+            icon: ShoppingBag,
+            title: 'Free Packing',
+            description: 'Save ₹7-₹15 on every order with free item packing',
             color: 'text-amber-600',
             bgColor: 'bg-amber-100',
         },
         {
             icon: Zap,
             title: 'Instant Savings',
-            description: 'Discount applied automatically at checkout',
+            description: 'Packing charges removed automatically at checkout',
             color: 'text-blue-600',
             bgColor: 'bg-blue-100',
         },
         {
-            icon: Shield,
-            title: 'Stay Active',
-            description: 'Order ₹70+ every 3 days to keep discount active',
-            color: 'text-green-600',
-            bgColor: 'bg-green-100',
-        },
-        {
-            icon: Star,
-            title: 'One-Time Payment',
-            description: 'Pay ₹29 once, enjoy forever',
+            icon: Clock,
+            title: 'Flexible Plans',
+            description: 'Choose between 3 or 5 free packing orders',
             color: 'text-purple-600',
             bgColor: 'bg-purple-100',
         },
+    ];
+
+    const plans = [
+        {
+            id: 'basic',
+            name: 'Basic',
+            price: 25,
+            orders: 3,
+            validity: '1 week',
+            popular: false,
+            color: 'border-mcd-border',
+            bgColor: 'bg-white'
+        },
+        {
+            id: 'pro',
+            name: 'Pro',
+            price: 35,
+            orders: 5,
+            validity: '1 month',
+            popular: true,
+            color: 'border-amber-400 shadow-amber-100',
+            bgColor: 'bg-amber-50/30'
+        }
     ];
 
     return (
@@ -100,7 +116,7 @@ export default function Membership() {
                                 <Crown className="h-5 w-5 text-amber-500" />
                             </div>
                             <h1 className="text-lg font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                                Campus Membership
+                                Campus Membership 🎓
                             </h1>
                         </div>
                     </div>
@@ -114,158 +130,80 @@ export default function Membership() {
                     </div>
                 ) : (
                     <div className="relative">
-                        {!enableCampusMembership && (
-                            <div className="absolute inset-0 z-20 bg-mcd-cream/60 backdrop-blur-[1.5px] flex items-start justify-center pt-24 rounded-3xl p-6">
-                                <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm border border-mcd-border animate-fade-up">
-                                    <div className="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Crown className="h-8 w-8 text-amber-600" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold mb-2">Coming Soon!</h3>
-                                    <p className="text-muted-foreground text-sm">
-                                        The Campus Membership program is currently being updated to bring you even better rewards.
-                                    </p>
-                                    <p className="text-mcd-red font-bold text-xs mt-4 uppercase tracking-wider">
-                                        Stay tuned for the launch
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                        <div className={!enableCampusMembership ? 'opacity-40 grayscale-[0.5] pointer-events-none' : ''}>
-                            {/* Status Card */}
-                            {isActive && (
-                                <div className={`relative overflow-hidden rounded-2xl p-5 shadow-lg mb-6 ${isEligibleForDiscount
-                                    ? 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600'
-                                    : 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-700'
-                                    }`}>
-                                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-20 translate-x-20" />
-                                    <div className="absolute bottom-0 left-0 w-28 h-28 bg-white/10 rounded-full translate-y-14 -translate-x-14" />
-
-                                    <div className="relative z-10">
-                                        <div className="flex items-center gap-3 mb-3">
-                                            <div className="bg-white/20 p-2 rounded-xl">
-                                                <Crown className="h-6 w-6 text-white" />
+                        <div className="space-y-6">
+                            {/* Plans Selection */}
+                            <div className="grid grid-cols-1 gap-4">
+                                {plans.map((plan) => (
+                                    <div 
+                                        key={plan.id}
+                                        className={`relative overflow-hidden rounded-2xl border-2 p-5 transition-all ${plan.color} ${plan.bgColor}`}
+                                    >
+                                        {plan.popular && (
+                                            <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                                                🔥 Most Popular
                                             </div>
+                                        )}
+                                        
+                                        <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <h2 className="font-bold text-white text-lg">Campus Member</h2>
-                                                <p className="text-white/70 text-xs">
-                                                    Since {membership?.membership_purchase_date
-                                                        ? new Date(membership.membership_purchase_date).toLocaleDateString('en-IN', {
-                                                            day: 'numeric',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                        })
-                                                        : 'N/A'}
+                                                <h3 className="text-xl font-black text-foreground">{plan.name} Membership</h3>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    ✔ Free packing on <span className="font-bold text-foreground">{plan.orders} orders</span>
                                                 </p>
+                                                {plan.id === 'basic' && (
+                                                    <p className="text-xs text-muted-foreground mt-1 italic">
+                                                        ✔ Valid for 1 week
+                                                    </p>
+                                                )}
+                                                {plan.id === 'pro' && (
+                                                    <p className="text-xs text-muted-foreground mt-1 italic font-medium text-amber-600">
+                                                        ✔ Best value for regular buyers
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-2xl font-black text-mcd-red">₹{plan.price}</div>
                                             </div>
                                         </div>
 
-                                        <div className="bg-white/15 rounded-xl p-3">
-                                            {isEligibleForDiscount ? (
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <Check className="h-5 w-5 text-green-200" />
-                                                        <div>
-                                                            <p className="text-white font-medium text-sm">Discount Active</p>
-                                                            <p className="text-white/70 text-xs">discount on preorders ≥₹70</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="bg-white/20 px-3 py-1.5 rounded-lg">
-                                                        <div className="flex items-center gap-1 text-white text-sm font-bold">
-                                                            <Clock className="h-3.5 w-3.5" />
-                                                            <span>{daysRemaining}d</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                        <Button
+                                            onClick={handlePurchase}
+                                            disabled={isPurchasing}
+                                            variant={plan.popular ? 'gradient' : 'outline'}
+                                            className="w-full h-11 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
+                                        >
+                                            {isPurchasing ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
                                             ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <ShoppingBag className="h-5 w-5 text-white/80" />
-                                                    <div>
-                                                        <p className="text-white font-medium text-sm">Discount Inactive</p>
-                                                        <p className="text-white/70 text-xs">
-                                                            Place an order of ₹70+ to reactivate your discount
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                                `Join ${plan.name} now`
                                             )}
-                                        </div>
+                                        </Button>
                                     </div>
-                                </div>
-                            )}
+                                ))}
+                            </div>
 
                             {/* Benefits List */}
-                            <div className="mb-6">
-                                <h3 className="font-bold text-foreground text-base mb-3">Membership Benefits</h3>
-                                <div className="space-y-3">
+                            <div className="bg-white/50 rounded-2xl p-5 border border-mcd-border border-dashed">
+                                <h3 className="font-bold text-foreground text-sm mb-4 uppercase tracking-widest text-center opacity-70">
+                                    👉 Join now & save on every order
+                                </h3>
+                                <div className="space-y-4">
                                     {benefits.map((benefit, index) => (
                                         <div
                                             key={index}
-                                            className="bg-white rounded-xl border border-mcd-border p-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow"
+                                            className="flex items-start gap-4"
                                         >
-                                            <div className={`${benefit.bgColor} p-2 rounded-lg flex-shrink-0`}>
+                                            <div className={`${benefit.bgColor} p-2.5 rounded-xl shadow-sm`}>
                                                 <benefit.icon className={`h-5 w-5 ${benefit.color}`} />
                                             </div>
                                             <div>
-                                                <p className="font-semibold text-foreground text-sm">{benefit.title}</p>
+                                                <p className="font-bold text-foreground text-sm">{benefit.title}</p>
                                                 <p className="text-muted-foreground text-xs mt-0.5">{benefit.description}</p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-
-                            {/* How It Works */}
-                            <div className="mb-6">
-                                <h3 className="font-bold text-foreground text-base mb-3">How It Works</h3>
-                                <div className="bg-white rounded-xl border border-mcd-border p-4 shadow-sm">
-                                    <ol className="space-y-3">
-                                        <li className="flex items-start gap-3">
-                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
-                                            <p className="text-sm text-muted-foreground">
-                                                <span className="font-medium text-foreground">Purchase</span> — Pay ₹29 one-time to become a campus member
-                                            </p>
-                                        </li>
-                                        <li className="flex items-start gap-3">
-                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
-                                            <p className="text-sm text-muted-foreground">
-                                                <span className="font-medium text-foreground">Order</span> — Place a preorder of ₹70 or more to activate your discount
-                                            </p>
-                                        </li>
-                                        <li className="flex items-start gap-3">
-                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
-                                            <p className="text-sm text-muted-foreground">
-                                                <span className="font-medium text-foreground">Save</span> — Get discount automatically on every qualifying order
-                                            </p>
-                                        </li>
-                                        <li className="flex items-start gap-3">
-                                            <span className="bg-amber-100 text-amber-700 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
-                                            <p className="text-sm text-muted-foreground">
-                                                <span className="font-medium text-foreground">Stay Active</span> — Order ₹70+ every 3 days to keep your discount alive
-                                            </p>
-                                        </li>
-                                    </ol>
-                                </div>
-                            </div>
-
-                            {/* Purchase Button */}
-                            {!isActive && (
-                                <Button
-                                    onClick={handlePurchase}
-                                    disabled={isPurchasing}
-                                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold h-12 rounded-xl text-base shadow-lg hover:shadow-xl transition-all"
-                                >
-                                    {isPurchasing ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                            Activating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Crown className="mr-2 h-5 w-5" />
-                                            Get Membership — ₹29
-                                        </>
-                                    )}
-                                </Button>
-                            )}
                         </div>
                     </div>
                 )}

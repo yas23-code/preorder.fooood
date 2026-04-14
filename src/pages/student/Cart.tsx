@@ -11,7 +11,14 @@ import { useAuth } from '@/context/AuthContext';
 import { useCanteenOrderStatus } from '@/hooks/useCanteenOrderStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateFees } from '@/lib/fees';
-import { ShoppingCart, ArrowLeft, Loader2, CreditCard, Tag, X, Check, AlertTriangle, Clock, Ban, Wallet as WalletIcon } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Loader2, CreditCard, Tag, X, Check, AlertTriangle, Clock, Ban, Wallet as WalletIcon, Sparkles } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { MembershipBanner } from '@/components/MembershipBanner';
 import { useMembership } from '@/hooks/useMembership';
@@ -81,7 +88,9 @@ export default function Cart() {
   const [isBannedStudent, setIsBannedStudent] = useState(false);
   const [membershipDiscount, setMembershipDiscount] = useState(5); // default ₹5
   const [membershipDiscountStartTime, setMembershipDiscountStartTime] = useState<string | null>(null);
-  const { isEligibleForDiscount } = useMembership();
+  const { isActive, isEligibleForDiscount } = useMembership();
+  const [showUpsell, setShowUpsell] = useState(false);
+  const [hasShownUpsell, setHasShownUpsell] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cashfree' | 'wallet'>('cashfree');
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -319,6 +328,17 @@ export default function Cart() {
       totalPayable: Math.round((adjustedTotalPayable + gstAmount + totalPackingCharge) * 100) / 100,
     };
   }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod, isBoysHostelCanteen]);
+
+  // Show upsell popup when packing charge is present and user is not a member
+  useEffect(() => {
+    if (totalPackingCharge > 0 && !isActive && !hasShownUpsell && !isOrdering) {
+      const timer = setTimeout(() => {
+        setShowUpsell(true);
+        setHasShownUpsell(true);
+      }, 1500); // Small delay for better UX
+      return () => clearTimeout(timer);
+    }
+  }, [totalPackingCharge, isActive, hasShownUpsell, isOrdering]);
 
   const total = fees.totalPayable;
 
@@ -660,6 +680,54 @@ export default function Cart() {
       </div>
 
       <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-3xl">
+        {/* Membership Upsell Dialog */}
+        <Dialog open={showUpsell} onOpenChange={setShowUpsell}>
+          <DialogContent className="sm:max-w-[425px] rounded-3xl border-mcd-border bg-white p-0 overflow-hidden">
+            <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-8 text-center text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
+              <div className="relative z-10 space-y-4">
+                <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
+                  <Sparkles className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-black leading-tight">
+                  You just paid ₹{totalPackingCharge} packing 😢
+                </h3>
+                <p className="text-white/90 text-sm font-medium">
+                  Get membership & save more on next orders!
+                </p>
+              </div>
+            </div>
+            <div className="p-6 space-y-4 bg-white">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-foreground">
+                  <Check className="h-4 w-4 text-green-500 font-bold" />
+                  <span>Free packing on every order</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-foreground">
+                  <Check className="h-4 w-4 text-green-500 font-bold" />
+                  <span>Priority preorder support</span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 pt-2">
+                <Button 
+                  variant="gradient" 
+                  className="w-full h-12 rounded-xl font-bold shadow-lg"
+                  asChild
+                >
+                  <Link to="/student/membership">Join Campus Membership 🎓</Link>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full text-muted-foreground text-xs"
+                  onClick={() => setShowUpsell(false)}
+                >
+                  Maybe later
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Banned Student Warning Banner */}
         {isBannedStudent && (
           <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 mb-4 flex items-start gap-3">
