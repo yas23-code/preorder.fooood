@@ -14,6 +14,10 @@ interface EntityFee {
     totalFees: number;
 }
 
+// Set this date to filter out legacy platform fee revenue
+// Format: 'YYYY-MM-DD'
+const PLATFORM_FEE_RESET_DATE = '2026-04-15';
+
 export function PlatformFeeReport() {
     const [feeData, setFeeData] = useState<EntityFee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -27,6 +31,7 @@ export function PlatformFeeReport() {
                 const now = new Date();
                 const startOfCurrentMonth = startOfMonth(now).toISOString();
                 const endOfCurrentMonth = endOfMonth(now).toISOString();
+                const resetDate = new Date(PLATFORM_FEE_RESET_DATE).toISOString();
 
                 // 1. Fetch Canteens and their fees
                 const { data: canteens } = await supabase
@@ -37,7 +42,8 @@ export function PlatformFeeReport() {
                 const { data: canteenOrders } = await supabase
                     .from('orders')
                     .select('canteen_id, platform_fee, created_at')
-                    .eq('payment_status', 'paid');
+                    .eq('payment_status', 'paid')
+                    .gte('created_at', resetDate);
 
                 // 2. Fetch Shops and their fees
                 const { data: shops } = await supabase
@@ -48,7 +54,8 @@ export function PlatformFeeReport() {
                 const { data: shopOrders } = await supabase
                     .from('shop_orders')
                     .select('shop_id, platform_fee, created_at')
-                    .eq('payment_status', 'paid');
+                    .eq('payment_status', 'paid')
+                    .gte('created_at', resetDate);
 
                 const entities: EntityFee[] = [];
                 let monthlyGrandTotal = 0;
@@ -197,6 +204,7 @@ export function PlatformFeeReport() {
                 )}
                 <p className="mt-4 text-[11px] text-muted-foreground italic flex items-center gap-1">
                     * Fees shown are platform commissions collected from students.
+                    Tracking since: {format(new Date(PLATFORM_FEE_RESET_DATE), 'PPP')}
                 </p>
             </CardContent>
         </Card>
