@@ -16,7 +16,8 @@ interface Transaction {
     created_at: string;
 }
 
-const TOP_UP_AMOUNTS = [100, 300, 500, 1000];
+const TOP_UP_AMOUNTS = [150, 300, 500, 1000];
+const MIN_TOPUP_AMOUNT = 150;
 
 export default function Wallet() {
     const { user, profile } = useAuth();
@@ -101,6 +102,11 @@ export default function Wallet() {
     const handleTopUp = async (amount: number) => {
         if (!user || !profile) return;
 
+        if (amount < MIN_TOPUP_AMOUNT) {
+            toast.error(`Minimum top-up amount is ₹${MIN_TOPUP_AMOUNT}`);
+            return;
+        }
+
         setIsTopUpLoading(true);
         try {
             const orderId = `WAL_${Date.now()}`;
@@ -142,7 +148,7 @@ export default function Wallet() {
     const getBonusText = (amount: number) => {
         if (amount >= 500) return '10% Bonus';
         if (amount >= 300) return '7% Bonus';
-        if (amount >= 100) return '5% Bonus';
+        if (amount >= 150) return '5% Bonus';
         return null;
     };
 
@@ -232,7 +238,7 @@ export default function Wallet() {
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                             <input
                                 type="number"
-                                placeholder="Custom amount"
+                                placeholder={`Min ₹${MIN_TOPUP_AMOUNT}`}
                                 className="w-full pl-7 pr-4 h-11 rounded-lg border border-mcd-border bg-white focus:outline-none focus:ring-2 focus:ring-mcd-red/20"
                                 value={customAmount}
                                 onChange={(e) => setCustomAmount(e.target.value)}
@@ -243,7 +249,7 @@ export default function Wallet() {
                             variant="gradient"
                             className="h-11 px-6 shadow-md"
                             onClick={() => handleTopUp(Number(customAmount))}
-                            disabled={isTopUpLoading || !customAmount || Number(customAmount) < 10 || !enableWallet}
+                            disabled={isTopUpLoading || !customAmount || Number(customAmount) < MIN_TOPUP_AMOUNT || !enableWallet}
                         >
                             {isTopUpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
                         </Button>
@@ -254,7 +260,7 @@ export default function Wallet() {
                         <div className="text-xs space-y-1">
                             <p className="font-bold text-mcd-yellow-700">Wallet Benefits</p>
                             <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                                <li>Load ₹100+ and get 5% bonus.</li>
+                                <li>Load ₹150+ and get 5% bonus.</li>
                                 <li>Load ₹300+ and get 7% bonus (Save ₹21).</li>
                                 <li>Load ₹500+ and get 10% bonus (Save ₹50).</li>
                                 <li>Zero platform fees on orders paid via wallet!</li>
