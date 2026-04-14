@@ -16,8 +16,8 @@ interface Transaction {
     created_at: string;
 }
 
-const TOP_UP_AMOUNTS = [150, 300, 500, 1000];
-const MIN_TOPUP_AMOUNT = 150;
+const TOP_UP_AMOUNTS = [200, 300, 500, 1000];
+const MIN_TOPUP_AMOUNT = 200;
 
 export default function Wallet() {
     const { user, profile } = useAuth();
@@ -148,7 +148,7 @@ export default function Wallet() {
     const getBonusText = (amount: number) => {
         if (amount >= 500) return '10% Bonus';
         if (amount >= 300) return '7% Bonus';
-        if (amount >= 150) return '5% Bonus';
+        if (amount >= 200) return '5% Bonus';
         return null;
     };
 
@@ -270,7 +270,7 @@ export default function Wallet() {
                         <div className="text-xs space-y-1">
                             <p className="font-bold text-mcd-yellow-700">Wallet Benefits</p>
                             <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                                <li>Load ₹150+ and get 5% bonus.</li>
+                                <li>Load ₹200+ and get 5% bonus.</li>
                                 <li>Load ₹300+ and get 7% bonus (Save ₹21).</li>
                                 <li>Load ₹500+ and get 10% bonus (Save ₹50).</li>
                                 <li>Zero platform fees on orders paid via wallet!</li>
