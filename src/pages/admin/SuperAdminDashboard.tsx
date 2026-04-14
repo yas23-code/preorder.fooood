@@ -13,6 +13,7 @@ import { CollegeConfigManager } from '@/components/admin/CollegeConfigManager';
 import { PendingShopApprovals } from '@/components/admin/PendingShopApprovals';
 import { PendingCanteenApprovals } from '@/components/admin/PendingCanteenApprovals';
 import { RejectedOrdersList } from '@/components/admin/RejectedOrdersList';
+import { MembershipReport } from '@/components/admin/MembershipReport';
 import { LogOut, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -83,6 +84,9 @@ export default function SuperAdminDashboard() {
 
             {/* Platform Fees Report */}
             <PlatformFeeReport />
+
+            {/* Membership Revenue Report */}
+            <MembershipReport />
 
             {/* Daily Report */}
             <DailyCollectionReport />

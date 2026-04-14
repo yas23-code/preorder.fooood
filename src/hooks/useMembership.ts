@@ -90,7 +90,7 @@ export function useMembership(): MembershipState {
 
         try {
             // Redirect to Cashfree payment
-            const orderId = `${user.id}_mem_${Date.now()}`;
+            const orderId = `${user.id}_mem_${amount}_${Date.now()}`;
             const returnUrl = `${window.location.origin}/student/payment-result?order_id=${orderId}`;
 
             // Create Cashfree payment order using edge function

@@ -71,15 +71,29 @@ Deno.serve(async (req) => {
     // Check if this is a membership payment
     if (orderId.includes('_mem_')) {
       if (isPaid) {
-        // Extract userId from orderId (format: {userId}_mem_{timestamp})
-        const userId = orderId.split('_mem_')[0];
-        console.log(`Activating membership for user: ${userId}`);
+        // Extract userId and amount from orderId
+        // Format: {userId}_mem_{amount}_{timestamp}
+        const parts = orderId.split('_mem_');
+        const userId = parts[0];
+        const planParts = parts[1].split('_');
+        const amountPaid = Number(planParts[0]);
+        
+        // Determine plan type based on amount
+        const planType = amountPaid >= 35 ? 'PRO' : 'BASIC';
+
+        console.log(`Activating ${planType} membership for user: ${userId}, amount: ${amountPaid}`);
 
         const { error: activationError } = await supabase
-          .rpc('activate_membership', { p_user_id: userId });
+          .rpc('activate_membership', { 
+            p_user_id: userId,
+            p_plan_type: planType,
+            p_amount_paid: amountPaid
+          });
 
         if (activationError) {
           console.error('Error activating membership:', activationError);
+          // Fallback to legacy call if new RPC fails (e.g. columns not added yet)
+          await supabase.rpc('activate_membership', { p_user_id: userId });
         }
       }
 
@@ -110,11 +124,12 @@ Deno.serve(async (req) => {
 
         const amount = Number(cashfreeData.order_amount);
 
-        // Calculate bonus
+        // Calculate bonus based on new tiered structure
         let bonus = 0;
-        if (amount >= 500) bonus = amount * 0.10;
-        else if (amount >= 300) bonus = amount * 0.07;
-        else if (amount >= 100) bonus = amount * 0.05;
+        if (amount >= 1000) bonus = amount * 0.25;
+        else if (amount >= 500) bonus = amount * 0.20;
+        else if (amount >= 300) bonus = amount * 0.15;
+        else if (amount >= 200) bonus = amount * 0.10;
 
         console.log(`Loading wallet for user: ${userId}, amount: ${amount}, bonus: ${bonus}`);
 
