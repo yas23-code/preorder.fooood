@@ -19,10 +19,10 @@ export default function Membership() {
     const { enableCampusMembership } = useCollegeLocation();
     const [isPurchasing, setIsPurchasing] = useState(false);
 
-    const handlePurchase = async () => {
+    const handlePurchase = async (amount: number) => {
         setIsPurchasing(true);
         try {
-            const result = await purchaseMembership();
+            const result = await purchaseMembership(amount);
             if (result.success) {
                 toast.custom(
                     (t) => (
@@ -165,7 +165,7 @@ export default function Membership() {
                                         </div>
 
                                         <Button
-                                            onClick={handlePurchase}
+                                            onClick={() => handlePurchase(plan.price)}
                                             disabled={isPurchasing}
                                             variant={plan.popular ? 'gradient' : 'outline'}
                                             className="w-full h-11 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"

@@ -18,7 +18,7 @@ export interface MembershipState {
     isEligibleForDiscount: boolean; // isActive && isMembershipActive
     daysRemaining: number;
     isLoading: boolean;
-    purchaseMembership: () => Promise<{ success: boolean; error?: string }>;
+    purchaseMembership: (amount: number) => Promise<{ success: boolean; error?: string }>;
     refreshMembership: () => Promise<void>;
 }
 
@@ -85,7 +85,7 @@ export function useMembership(): MembershipState {
         fetchMembership();
     }, [fetchMembership]);
 
-    const purchaseMembership = async (): Promise<{ success: boolean; error?: string }> => {
+    const purchaseMembership = async (amount: number): Promise<{ success: boolean; error?: string }> => {
         if (!user) return { success: false, error: 'Not authenticated' };
 
         try {
@@ -103,7 +103,7 @@ export function useMembership(): MembershipState {
             const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-cashfree-order', {
                 body: {
                     orderId,
-                    amount: 29, // Membership price
+                    amount, // Membership price
                     customerName: profileData?.name || 'Customer',
                     customerEmail: profileData?.email || 'customer@example.com',
                     customerPhone: '9999999999', // Placeholder as it's required by PG
