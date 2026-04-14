@@ -290,12 +290,12 @@ export default function Cart() {
   }, 0);
 
   const fees = useMemo(() => {
-    const baseFees = calculateFees(discountedAmount + totalPackingCharge);
-    // Add GST on top of the total (GST should be on food items, packing charges might or might not have GST but usually food tax is separate)
-    // We'll keep GST on discounted food amount as calculated above
+    const baseFees = calculateFees(discountedAmount);
+    // Add GST and Packing Charges on top of the total
     return {
       ...baseFees,
-      totalPayable: Math.round((baseFees.totalPayable + gstAmount) * 100) / 100,
+      orderAmount: discountedAmount, // Force display to match food price strictly
+      totalPayable: Math.round((baseFees.totalPayable + gstAmount + totalPackingCharge) * 100) / 100,
     };
   }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod]);
 

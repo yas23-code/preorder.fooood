@@ -4,8 +4,10 @@
  * Business Rules:
  * - PG charges 2% on every order
  * - Platform must earn minimum ₹0.50 net profit after PG fee
- * - Orders ≤ ₹50: Platform Fee = ₹1.50 (flat)
- * - Orders > ₹50: Platform Fee = 3% of order amount
+ * - Orders < ₹50: Platform Fee = ₹0
+ * - Orders ₹50-₹69: Platform Fee = ₹3
+ * - Orders ₹70-₹99: Platform Fee = ₹2.5
+ * - Orders >= ₹100: Platform Fee = ₹4
  */
 
 export interface FeeBreakdown {
@@ -23,8 +25,10 @@ export function calculateFees(orderAmount: number): FeeBreakdown {
   let platformFee = 0;
   if (orderAmount >= 50 && orderAmount <= 69) {
     platformFee = 3;
-  } else if (orderAmount >= 70 && orderAmount <= 100) {
+  } else if (orderAmount >= 70 && orderAmount < 100) {
     platformFee = 2.5;
+  } else if (orderAmount >= 100) {
+    platformFee = 4;
   }
 
   return {
