@@ -295,10 +295,12 @@ export default function Cart() {
   const fees = useMemo(() => {
     const baseFees = calculateFees(discountedAmount);
 
-    // Override platform fee for Boys Hostel Canteen (₹2 for ₹50-₹69 range)
+    // Override platform fee for Boys Hostel Canteen
     let platformFee = baseFees.platformFee;
     if (isBoysHostelCanteen && discountedAmount >= 50 && discountedAmount <= 69) {
       platformFee = 2;
+    } else if (isBoysHostelCanteen && discountedAmount >= 100) {
+      platformFee = 3;
     }
 
     const adjustedTotalPayable = discountedAmount + platformFee;
