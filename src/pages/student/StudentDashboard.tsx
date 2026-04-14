@@ -12,6 +12,7 @@ import { ActiveOrderBottomBar } from '@/components/ActiveOrderBottomBar';
 import { ActiveShopOrderBottomBar } from '@/components/ActiveShopOrderBottomBar';
 import { NearbyShopsSection } from '@/components/student/NearbyShopsSection';
 import { useMembership } from '@/hooks/useMembership';
+import { MembershipReminder } from '@/components/student/MembershipReminder';
 
 
 import { OrderRejectionBanner } from '@/components/OrderRejectionBanner';
@@ -72,6 +73,7 @@ export default function StudentDashboard() {
   const [showAffiliationModal, setShowAffiliationModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [showMembershipReminder, setShowMembershipReminder] = useState(false);
 
   // College location check for canteen visibility
   const { isInsideCampus, isLoading: isLocationLoading, collegeConfig, locationError, showNearbyShops, enableCampusMembership, enableWallet } = useCollegeLocation();
@@ -204,19 +206,18 @@ export default function StudentDashboard() {
       const hasSeenReminder = localStorage.getItem(`mem_rem_${user.id}`);
       if (!hasSeenReminder) {
         setTimeout(() => {
-          toast("Enjoying Preorder? 🎓", {
-            description: "Join Campus Membership to save on every order with free packing!",
-            action: {
-              label: "Join Now",
-              onClick: () => navigate('/student/membership')
-            },
-            duration: 8000,
-          });
-          localStorage.setItem(`mem_rem_${user.id}`, 'true');
+          setShowMembershipReminder(true);
         }, 3000);
       }
     }
-  }, [user, profile, isActive, navigate]);
+  }, [user, profile, isActive]);
+
+  const handleDismissReminder = () => {
+    if (user) {
+      localStorage.setItem(`mem_rem_${user.id}`, 'true');
+      setShowMembershipReminder(false);
+    }
+  };
 
   useEffect(() => {
     if (location.state?.orderSuccess) {
@@ -297,6 +298,11 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-mcd-cream">
+      {/* Membership Reminder */}
+      {showMembershipReminder && (
+        <MembershipReminder onClose={handleDismissReminder} />
+      )}
+
       {/* Order Rejection Notifications */}
       {rejectionNotifications.map((notification) => (
         <OrderRejectionBanner
