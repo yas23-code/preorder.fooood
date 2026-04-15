@@ -100,45 +100,7 @@ export function MembershipBanner({ subtotal, membershipDiscount, startTime }: Me
         );
     }
 
-    // 🛍 Member but no qualifying recent order
-    if (isActive && !isMembershipActive) {
-        return (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
-                <div className="bg-amber-100 p-1.5 rounded-lg flex-shrink-0 mt-0.5">
-                    <Crown className="h-4 w-4 text-amber-600" />
-                </div>
-                <div>
-                    <p className="text-sm font-medium text-amber-700">
-                        Member Discount Inactive
-                    </p>
-                    <p className="text-xs text-amber-600 mt-0.5 flex items-center gap-1">
-                        <ShoppingBag className="h-3 w-3 flex-shrink-0" />
-                        Order ₹70+ to unlock your ₹{membershipDiscount} member discount
-                    </p>
-                </div>
-            </div>
-        );
-    }
 
-    // 📦 Member with activity but order below ₹70
-    if (isActive && isMembershipActive && !meetsMinimumOrder) {
-        return (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 flex items-start gap-3">
-                <div className="bg-blue-100 p-1.5 rounded-lg flex-shrink-0 mt-0.5">
-                    <Crown className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                    <p className="text-sm font-medium text-blue-700">
-                        Almost there!
-                    </p>
-                    <p className="text-xs text-blue-600 mt-0.5">
-                        Add ₹{(70 - subtotal).toFixed(0)} more to get ₹{membershipDiscount} member discount
-                        {startTime ? ` (after ${formatTime(startTime)})` : ''}
-                    </p>
-                </div>
-            </div>
-        );
-    }
 
     return null;
 }

@@ -125,13 +125,11 @@ export function MembershipCard() {
                             <h3 className="font-bold text-white text-sm">
                                 {membership?.plan_type === 'PRO' ? 'Campus Pro Member' : 'Campus Member'}
                             </h3>
-                            {isEligibleForDiscount ? (
+                            {isEligibleForDiscount && (
                                 <div className="flex items-center gap-1">
                                     <Check className="h-3 w-3 text-green-200" />
                                     <span className="text-green-200 text-xs font-medium">Discount Active</span>
                                 </div>
-                            ) : (
-                                <span className="text-white/70 text-xs">Discount Inactive</span>
                             )}
                         </div>
                     </div>
@@ -146,16 +144,6 @@ export function MembershipCard() {
                     ) : null}
                 </div>
 
-                {!isMembershipActive && (
-                    <div className="mt-2 bg-white/15 rounded-lg px-3 py-2">
-                        <div className="flex items-center gap-2">
-                            <ShoppingBag className="h-4 w-4 text-white/80 flex-shrink-0" />
-                            <p className="text-white/90 text-xs">
-                                Order ₹70+ to unlock your member discount
-                            </p>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );
