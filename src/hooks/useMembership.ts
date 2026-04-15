@@ -7,6 +7,7 @@ export interface MembershipData {
     user_id: string;
     membership_status: 'ACTIVE' | 'INACTIVE';
     membership_purchase_date: string | null;
+    plan_type: 'BASIC' | 'PRO' | null;
     created_at: string;
     updated_at: string;
 }

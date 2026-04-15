@@ -133,51 +133,71 @@ export default function Membership() {
                         <div className="space-y-6">
                             {/* Plans Selection */}
                             <div className="grid grid-cols-1 gap-4">
-                                {plans.map((plan) => (
-                                    <div 
-                                        key={plan.id}
-                                        className={`relative overflow-hidden rounded-2xl border-2 p-5 transition-all ${plan.color} ${plan.bgColor}`}
-                                    >
-                                        {plan.popular && (
-                                            <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                                                🔥 Most Popular
-                                            </div>
-                                        )}
-                                        
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <h3 className="text-xl font-black text-foreground">{plan.name} Membership</h3>
-                                                <p className="text-sm text-muted-foreground mt-1">
-                                                    ✔ Free packing on <span className="font-bold text-foreground">{plan.orders} orders</span>
-                                                </p>
-                                                <p className="text-xs text-muted-foreground mt-1 italic">
-                                                    ✔ Valid for {plan.validity}
-                                                </p>
-                                                {plan.id === 'pro' && (
-                                                    <p className="text-xs font-medium text-amber-600 mt-0.5">
-                                                        ✔ Best value for regular buyers
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-2xl font-black text-mcd-red">₹{plan.price}</div>
-                                            </div>
-                                        </div>
-
-                                        <Button
-                                            onClick={() => handlePurchase(plan.price)}
-                                            disabled={isPurchasing}
-                                            variant={plan.popular ? 'gradient' : 'outline'}
-                                            className="w-full h-11 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
+                                {plans.map((plan) => {
+                                    const isCurrentPlan = isActive && membership?.plan_type?.toLowerCase() === plan.id;
+                                    
+                                    return (
+                                        <div 
+                                            key={plan.id}
+                                            className={`relative overflow-hidden rounded-2xl border-2 p-5 transition-all ${
+                                                isCurrentPlan 
+                                                ? 'border-green-500 bg-green-50/30' 
+                                                : plan.color + ' ' + plan.bgColor
+                                            }`}
                                         >
-                                            {isPurchasing ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                `Join ${plan.name} now`
+                                            {plan.popular && !isCurrentPlan && (
+                                                <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                                                    🔥 Most Popular
+                                                </div>
                                             )}
-                                        </Button>
-                                    </div>
-                                ))}
+                                            
+                                            {isCurrentPlan && (
+                                                <div className="absolute top-0 right-0 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
+                                                    <Check className="h-3 w-3" /> Active Plan
+                                                </div>
+                                            )}
+                                            
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h3 className="text-xl font-black text-foreground">{plan.name} Membership</h3>
+                                                    <p className="text-sm text-muted-foreground mt-1">
+                                                        ✔ Free packing on <span className="font-bold text-foreground">{plan.orders} orders</span>
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mt-1 italic">
+                                                        ✔ Valid for {plan.validity}
+                                                    </p>
+                                                    {plan.id === 'pro' && (
+                                                        <p className="text-xs font-medium text-amber-600 mt-0.5">
+                                                            ✔ Best value for regular buyers
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-2xl font-black text-mcd-red">₹{plan.price}</div>
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                onClick={() => handlePurchase(plan.price)}
+                                                disabled={isPurchasing || isCurrentPlan}
+                                                variant={isCurrentPlan ? 'outline' : (plan.popular ? 'gradient' : 'outline')}
+                                                className={`w-full h-11 rounded-xl font-bold shadow-md hover:shadow-lg transition-all ${
+                                                    isCurrentPlan ? 'border-green-200 text-green-700 hover:bg-green-50' : ''
+                                                }`}
+                                            >
+                                                {isPurchasing ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : isCurrentPlan ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Check className="h-4 w-4" /> Already Purchased
+                                                    </div>
+                                                ) : (
+                                                    `Join ${plan.name} now`
+                                                )}
+                                            </Button>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {/* Benefits List */}

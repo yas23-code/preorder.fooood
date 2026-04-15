@@ -122,7 +122,9 @@ export function MembershipCard() {
                             <Crown className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-white text-sm">Campus Member</h3>
+                            <h3 className="font-bold text-white text-sm">
+                                {membership?.plan_type === 'PRO' ? 'Campus Pro Member' : 'Campus Member'}
+                            </h3>
                             {isEligibleForDiscount ? (
                                 <div className="flex items-center gap-1">
                                     <Check className="h-3 w-3 text-green-200" />

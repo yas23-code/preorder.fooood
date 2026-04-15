@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, XCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, ArrowLeft, Crown, Sparkles, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCart } from '@/context/CartContext';
 import { QRCodeSVG } from 'qrcode.react';
@@ -108,11 +108,15 @@ export default function PaymentResult() {
 
         if (data.success) {
           if (isMembershipId) {
+            const amount = orderId.split('_mem_')[1]?.split('_')[0];
+            const planName = Number(amount) >= 35 ? 'Pro' : 'Basic';
+            
             if (isMounted) setStatus('success');
-            toast.success('Membership activated successfully!');
-            setTimeout(() => {
-              if (isMounted) navigate('/student/dashboard');
-            }, 3000);
+            toast.success(`${planName} Membership activated successfully!`);
+            
+            // For memberships, we want to show a nice confirmation on the page too
+            // instead of just redirecting immediately.
+            // We'll let the success UI render and it will have a specific view for membership.
             return;
           }
 
@@ -203,19 +207,64 @@ export default function PaymentResult() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-sm p-8 max-w-md w-full text-center">
+      <div className="bg-white rounded-2xl shadow-sm p-8 max-w-md w-full text-center border-2 border-amber-100 relative overflow-hidden">
+        {orderId?.includes('_mem_') && (
+          <div className="absolute top-0 right-0 p-2">
+            <Sparkles className="h-6 w-6 text-amber-400 animate-pulse" />
+          </div>
+        )}
+        
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-foreground mb-2">Payment Successful!</h2>
-        <p className="text-muted-foreground mb-4">
-          Your order has been placed successfully.
+        <h2 className="text-2xl font-bold text-foreground mb-2">
+          {orderId?.includes('_mem_') ? 'Membership Activated! 🎉' : 'Payment Successful!'}
+        </h2>
+        <p className="text-muted-foreground mb-6">
+          {orderId?.includes('_mem_') 
+            ? 'Welcome to the Campus Membership program. Your benefits are now active!'
+            : 'Your order has been placed successfully.'}
         </p>
 
-        {/* Order Number Badge */}
-        {orderNo && (
-          <div className="bg-primary/10 text-primary px-4 py-2 rounded-xl inline-flex items-center gap-2 mb-4">
-            <span className="text-sm font-medium">ORDER</span>
-            <span className="text-2xl font-bold">#{orderNo}</span>
+        {orderId?.includes('_mem_') ? (
+          <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200 mb-8 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-100 p-2 rounded-xl">
+                <Crown className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-amber-900">
+                  {Number(orderId.split('_mem_')[1]?.split('_')[0]) >= 35 ? 'Pro Plan' : 'Basic Plan'}
+                </p>
+                <p className="text-xs text-amber-700">Valid for 7 days</p>
+              </div>
+              <div className="ml-auto">
+                <div className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
+                  Active
+                </div>
+              </div>
+            </div>
+            
+            <div className="pt-2 border-t border-amber-200">
+              <p className="text-xs text-amber-800 font-medium text-left mb-2">Your Benefits:</p>
+              <ul className="space-y-2 text-left">
+                <li className="flex items-center gap-2 text-xs text-amber-700">
+                  <Check className="h-3 w-3 text-green-600" /> Free item packing on orders
+                </li>
+                <li className="flex items-center gap-2 text-xs text-amber-700">
+                  <Check className="h-3 w-3 text-green-600" /> Exclusive member-only support
+                </li>
+              </ul>
+            </div>
           </div>
+        ) : (
+          <>
+            {/* Order Number Badge */}
+            {orderNo && (
+              <div className="bg-primary/10 text-primary px-4 py-2 rounded-xl inline-flex items-center gap-2 mb-4">
+                <span className="text-sm font-medium">ORDER</span>
+                <span className="text-2xl font-bold">#{orderNo}</span>
+              </div>
+            )}
+          </>
         )}
 
         {/* QR Code Display */}

@@ -317,6 +317,11 @@ export default function Cart() {
       platformFee = 0;
     }
 
+    // Waive platform fee for Campus Members
+    if (isActive) {
+      platformFee = 0;
+    }
+
     const adjustedTotalPayable = discountedAmount + platformFee;
 
     // Add GST and Packing Charges on top of the total
@@ -895,6 +900,7 @@ export default function Cart() {
               membershipDiscount={membershipDiscountAmount}
               gstAmount={gstAmount}
               packingCharge={totalPackingCharge}
+              isMember={isActive}
             />
           </div>
 

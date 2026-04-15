@@ -8,9 +8,10 @@ interface FeeBreakdownCardProps {
   membershipDiscount?: number;
   gstAmount?: number;
   packingCharge?: number;
+  isMember?: boolean;
 }
 
-export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, membershipDiscount = 0, gstAmount = 0, packingCharge = 0 }: FeeBreakdownCardProps) {
+export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, membershipDiscount = 0, gstAmount = 0, packingCharge = 0, isMember = false }: FeeBreakdownCardProps) {
   // Separate coupon discount from membership discount
   const couponDiscount = discount - membershipDiscount;
 
@@ -45,7 +46,23 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, me
         </div>
       )}
 
-      {fees.platformFee > 0 && (
+      {isMember && (
+        <div className="flex items-center justify-between text-sm animate-in fade-in slide-in-from-right-2 duration-500">
+          <span className="text-amber-600 flex items-center gap-1 font-medium">
+            <Crown className="h-3 w-3" />
+            Platform Fee Waived
+            <Info className="h-3 w-3 text-amber-600/60" />
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-muted-foreground/50 line-through text-xs italic">
+              ₹{(fees.platformFee > 0 ? fees.platformFee : 4).toFixed(2)}
+            </span>
+            <span className="text-green-600 font-bold">FREE</span>
+          </span>
+        </div>
+      )}
+
+      {!isMember && fees.platformFee > 0 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground flex items-center gap-1">
             Platform Fee
