@@ -78,6 +78,7 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  packing_charge?: number;
 }
 
 export type SizeVariant = 'small' | 'medium' | 'large';

@@ -192,6 +192,11 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
             <span className="text-accent font-medium">{item.quantity}×</span>{' '}
             {item.name}
             <span className="text-muted-foreground text-sm ml-2">₹{(item.price * item.quantity).toFixed(2)}</span>
+            {item.packing_charge && item.packing_charge > 0 && (
+              <span className="text-amber-600 text-[10px] font-bold ml-2 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                + ₹{(item.packing_charge * item.quantity).toFixed(2)} PACKING
+              </span>
+            )}
           </p>
         ))}
       </div>

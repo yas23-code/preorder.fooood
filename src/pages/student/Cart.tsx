@@ -526,6 +526,7 @@ export default function Cart() {
           name: itemName,
           price: displayPrice,
           quantity: item.quantity,
+          packing_charge: item.menuItem.packing_charge || 0,
         };
       });
 
