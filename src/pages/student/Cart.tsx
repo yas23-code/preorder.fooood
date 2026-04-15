@@ -328,7 +328,7 @@ export default function Cart() {
       orderAmount: discountedAmount, // Force display to match food price strictly
       totalPayable: Math.round((adjustedTotalPayable + gstAmount + finalPackingCharge) * 100) / 100,
     };
-  }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod, isBoysHostelCanteen]);
+  }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod, isBoysHostelCanteen, isActive, isGauriCafe]);
 
   // Show upsell popup when packing charge is present and user is not a member
   useEffect(() => {
