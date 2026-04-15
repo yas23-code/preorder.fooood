@@ -46,23 +46,7 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, me
         </div>
       )}
 
-      {isMember && (
-        <div className="flex items-center justify-between text-sm animate-in fade-in slide-in-from-right-2 duration-500">
-          <span className="text-amber-600 flex items-center gap-1 font-medium">
-            <Crown className="h-3 w-3" />
-            Platform Fee Waived
-            <Info className="h-3 w-3 text-amber-600/60" />
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="text-muted-foreground/50 line-through text-xs italic">
-              ₹{(fees.platformFee > 0 ? fees.platformFee : 4).toFixed(2)}
-            </span>
-            <span className="text-green-600 font-bold">FREE</span>
-          </span>
-        </div>
-      )}
-
-      {!isMember && fees.platformFee > 0 && (
+      {fees.platformFee > 0 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground flex items-center gap-1">
             Platform Fee
@@ -92,7 +76,22 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, me
         </div>
       )}
 
-      {packingCharge > 0 && (
+      {isMember && packingCharge > 0 && (
+        <div className="flex items-center justify-between text-sm animate-in fade-in slide-in-from-right-2 duration-500">
+          <span className="text-amber-600 flex items-center gap-1 font-medium">
+            <Crown className="h-3 w-3" />
+            Packing Charges Waived
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-muted-foreground/50 line-through text-xs italic">
+              ₹{packingCharge.toFixed(2)}
+            </span>
+            <span className="text-green-600 font-bold">FREE</span>
+          </span>
+        </div>
+      )}
+
+      {!isMember && packingCharge > 0 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Packing Charges</span>
           <span className="text-foreground">₹{packingCharge.toFixed(2)}</span>

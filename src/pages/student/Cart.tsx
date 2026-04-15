@@ -317,12 +317,8 @@ export default function Cart() {
       platformFee = 0;
     }
 
-    // Waive platform fee for Campus Members
-    if (isActive) {
-      platformFee = 0;
-    }
-
     const adjustedTotalPayable = discountedAmount + platformFee;
+    const finalPackingCharge = isActive ? 0 : totalPackingCharge;
 
     // Add GST and Packing Charges on top of the total
     return {
@@ -330,7 +326,7 @@ export default function Cart() {
       platformFee,
       netProfit: platformFee,
       orderAmount: discountedAmount, // Force display to match food price strictly
-      totalPayable: Math.round((adjustedTotalPayable + gstAmount + totalPackingCharge) * 100) / 100,
+      totalPayable: Math.round((adjustedTotalPayable + gstAmount + finalPackingCharge) * 100) / 100,
     };
   }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod, isBoysHostelCanteen]);
 
