@@ -137,7 +137,21 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
             {customerName || 'Customer'}
           </h3>
           <p className="text-muted-foreground">
-            ₹{(Number(order.total) - Number((order as any).platform_fee || 0)).toFixed(2)}
+            ₹{(() => {
+              const foodAndGst = Number(order.total) - Number((order as any).platform_fee || 0);
+              // Calculate if we need to add back the packing charge (if it was waived for a member)
+              // In our system, order.total covers what student paid. 
+              // order.packing_charge is the nominal charge.
+              // If the student paid less than (items_total + gst + nominal_packing), it was waived.
+              // However, the simplest way is: if the student was a member, the packing was waived.
+              // We'll just ensure the vendor always sees (food + gst + nominal_packing).
+              
+              const itemsTotal = order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+              const nominalPackingTotal = order.items?.reduce((sum, item) => sum + (Number(item.packing_charge || 0) * item.quantity), 0) || 0;
+              const gst = Number(order.gst_amount || 0);
+              
+              return (itemsTotal + nominalPackingTotal + gst).toFixed(2);
+            })()}
           </p>
         </div>
         {order.order_no && (
