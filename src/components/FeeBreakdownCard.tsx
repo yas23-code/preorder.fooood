@@ -9,9 +9,21 @@ interface FeeBreakdownCardProps {
   gstAmount?: number;
   packingCharge?: number;
   isMember?: boolean;
+  isWalletPayment?: boolean;
+  isGauriCafe?: boolean;
 }
 
-export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, membershipDiscount = 0, gstAmount = 0, packingCharge = 0, isMember = false }: FeeBreakdownCardProps) {
+export function FeeBreakdownCard({ 
+  fees, 
+  showNetProfit = false, 
+  discount = 0, 
+  membershipDiscount = 0, 
+  gstAmount = 0, 
+  packingCharge = 0, 
+  isMember = false,
+  isWalletPayment = false,
+  isGauriCafe = false
+}: FeeBreakdownCardProps) {
   // Separate coupon discount from membership discount
   const couponDiscount = discount - membershipDiscount;
 
@@ -53,6 +65,22 @@ export function FeeBreakdownCard({ fees, showNetProfit = false, discount = 0, me
             <Info className="h-3 w-3 text-muted-foreground/60" />
           </span>
           <span className="text-foreground">₹{fees.platformFee.toFixed(2)}</span>
+        </div>
+      )}
+      
+      {/* Platform Fee Waived for Wallet (Gauri Cafe specific) */}
+      {isGauriCafe && isWalletPayment && fees.platformFee === 0 && (
+        <div className="flex items-center justify-between text-sm animate-in fade-in slide-in-from-right-2 duration-500">
+           <span className="text-blue-600 flex items-center gap-1 font-medium">
+            Platform Fee (Wallet)
+            <Info className="h-3 w-3 text-blue-600/60" />
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-muted-foreground/50 line-through text-xs italic">
+              ₹{fees.orderAmount >= 100 ? '4.00' : (fees.orderAmount >= 70 ? '2.50' : (fees.orderAmount >= 50 ? '3.00' : '0.00'))}
+            </span>
+            <span className="text-green-600 font-bold">FREE</span>
+          </span>
         </div>
       )}
 

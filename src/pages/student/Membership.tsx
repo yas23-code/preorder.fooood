@@ -134,7 +134,11 @@ export default function Membership() {
                             {/* Plans Selection */}
                             <div className="grid grid-cols-1 gap-4">
                                 {plans.map((plan) => {
-                                    const isCurrentPlan = isActive && membership?.plan_type?.toLowerCase() === plan.id;
+                                    // Robust check for current plan:
+                                    // 1. Matches by plan_type field
+                                    // 2. Fallback: If isActive is true but plan_type is missing, treat as 'basic' (legacy support)
+                                    const userPlanType = membership?.plan_type?.toLowerCase() || (isActive ? 'basic' : null);
+                                    const isCurrentPlan = isActive && userPlanType === plan.id;
                                     
                                     return (
                                         <div 

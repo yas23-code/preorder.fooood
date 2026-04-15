@@ -897,6 +897,8 @@ export default function Cart() {
               gstAmount={gstAmount}
               packingCharge={totalPackingCharge}
               isMember={isActive}
+              isWalletPayment={paymentMethod === 'wallet'}
+              isGauriCafe={isGauriCafe}
             />
           </div>
 
