@@ -145,7 +145,7 @@ serve(async (req: Request) => {
         .from("orders")
         .update({
           payment_status: "paid",
-          status: "confirmed",
+          status: "pending",
           razorpay_payment_id: verifiedPaymentId,
           paid_at: new Date().toISOString(),
         })
@@ -174,7 +174,7 @@ serve(async (req: Request) => {
               await channel.send({
                 type: 'broadcast',
                 event: 'refresh_orders',
-                payload: { order_id: app_order_id, status: 'confirmed', vendor_id: canteenData.vendor_id }
+                payload: { order_id: app_order_id, status: 'pending', vendor_id: canteenData.vendor_id }
               });
               await supabase.removeChannel(channel);
             } catch (bErr) {

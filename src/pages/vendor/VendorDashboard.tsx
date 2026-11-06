@@ -623,7 +623,7 @@ export default function VendorDashboard() {
   // Only show orders that are paid
   const paidOrders = orders.filter(o => o.payment_status === 'paid');
   // Pending tab shows both 'pending' (awaiting acceptance) and 'accepted' (in progress) orders
-  const pendingOrders = paidOrders.filter(o => o.status === 'pending');
+  const pendingOrders = paidOrders.filter(o => o.status === 'pending' || o.status === 'confirmed');
   const acceptedOrders = paidOrders.filter(o => o.status === 'accepted');
   const inProgressOrders = [...pendingOrders, ...acceptedOrders];
   const readyOrders = paidOrders.filter(o => o.status === 'ready');

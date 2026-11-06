@@ -69,8 +69,8 @@ const statusConfig = {
     className: 'bg-blue-500 text-white hover:bg-blue-600',
   },
   confirmed: {
-    label: 'confirmed',
-    className: 'bg-blue-500 text-white hover:bg-blue-600',
+    label: 'awaiting confirmation',
+    className: 'bg-amber-500 text-white hover:bg-amber-600',
   },
   ready: {
     label: 'ready',
