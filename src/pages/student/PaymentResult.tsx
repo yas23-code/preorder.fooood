@@ -48,29 +48,16 @@ export default function PaymentResult() {
       }
 
       try {
-        if (isWalletPayment) {
-          // Wallet payment: order is already marked as paid by the RPC, just fetch details
-          const { data: orderData, error: orderError } = await supabase
-            .from('orders')
-            .select('qr_token, canteen_id, estimated_ready_time, status, order_no')
-            .eq('id', orderId)
-            .single();
+        // First check the database directly — Razorpay orders are verified immediately in the frontend handler or webhook
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select('qr_token, canteen_id, estimated_ready_time, status, order_no, payment_status')
+          .eq('id', orderId)
+          .maybeSingle();
 
-          if (orderError || !orderData) {
-            // Self-retry if order not found (might be DB lag)
-            if (retryCount < 2 && isMounted) {
-              console.log(`Retrying order fetch (attempt ${retryCount + 1})...`);
-              setTimeout(() => verifyPayment(retryCount + 1), 1000);
-              return;
-            }
-            console.error('Error fetching order after retries:', orderError);
-            if (isMounted) setStatus('failed');
-            return;
-          }
-
+        if (orderData && orderData.payment_status === 'paid') {
           if (!isMounted) return;
 
-          // Atomic-like update: Set all data before status
           const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : null;
           const safeCanteenId = orderData.canteen_id ? String(orderData.canteen_id) : null;
           const safeEstimatedReadyTime = orderData.estimated_ready_time ? String(orderData.estimated_ready_time) : null;
@@ -88,11 +75,31 @@ export default function PaymentResult() {
           }
 
           if (isMounted) setStatus('success');
-          toast.success('Order placed successfully with wallet!');
+          toast.success('Payment successful!');
           return;
         }
 
-        // Call the verify payment edge function (for Cashfree payments)
+        // If order exists and payment is still pending, wait briefly and retry
+        if (orderData && orderData.payment_status === 'pending' && retryCount < 4) {
+          console.log(`Payment status pending, retrying (${retryCount + 1}/4)...`);
+          setTimeout(() => verifyPayment(retryCount + 1), 1500);
+          return;
+        }
+
+        if (isWalletPayment) {
+          if (orderError || !orderData) {
+            if (retryCount < 2 && isMounted) {
+              setTimeout(() => verifyPayment(retryCount + 1), 1000);
+              return;
+            }
+            if (isMounted) setStatus('failed');
+            return;
+          }
+          if (isMounted) setStatus('success');
+          return;
+        }
+
+        // Fallback for Cashfree or membership orders
         const { data, error } = await supabase.functions.invoke('verify-cashfree-payment', {
           body: { orderId },
         });

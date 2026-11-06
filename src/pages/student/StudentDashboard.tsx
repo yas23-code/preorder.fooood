@@ -250,13 +250,13 @@ export default function StudentDashboard() {
       const { data, error } = await supabase
         .from('canteens')
         .select('*')
-        .eq('approval_status', 'approved')
         .order('name');
 
       if (error) {
         console.error('Error fetching canteens:', error);
       } else {
-        setCanteens(data || []);
+        const visible = (data || []).filter((c: any) => !c.banned);
+        setCanteens(visible);
       }
       setIsLoading(false);
     };
@@ -264,28 +264,16 @@ export default function StudentDashboard() {
     fetchCanteens();
   }, []);
 
-  // Filter canteens based on search and location
+  // Filter canteens based on search
   const filteredCanteens = useMemo(() => {
-    // If user is not an ABES student, they shouldn't see canteens at all
-    if (profile?.is_abes_student === false) {
-      return [];
-    }
-
-    // Existing location-based filtering for ABES students or undecided
-    // If user is outside campus and location restriction is active, show no canteens
-    // BUT only if nearby shops are enabled. If nearby shops are disabled, we always show canteens.
-    if (isInsideCampus === false && collegeConfig?.is_active && showNearbyShops) {
-      return [];
-    }
-
     if (!searchQuery) return canteens;
     const query = searchQuery.toLowerCase();
     return canteens.filter(
       canteen =>
         canteen.name.toLowerCase().includes(query) ||
-        canteen.location.toLowerCase().includes(query)
+        (canteen.location && canteen.location.toLowerCase().includes(query))
     );
-  }, [searchQuery, canteens, isInsideCampus, collegeConfig, showNearbyShops, profile?.is_abes_student]);
+  }, [searchQuery, canteens]);
 
   const handleLogout = async () => {
     await logout();

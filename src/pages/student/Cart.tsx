@@ -51,7 +51,8 @@ const getPeakMultiplier = (): number => {
 
 declare global {
   interface Window {
-    Cashfree: (config: { mode: string }) => {
+    Razorpay: any;
+    Cashfree?: (config: { mode: string }) => {
       checkout: (options: {
         paymentSessionId: string;
         redirectTarget: string;
@@ -72,7 +73,7 @@ interface Coupon {
 
 export default function Cart() {
   const { canteenId } = useParams<{ canteenId: string }>();
-  const { getCanteenItems, getTotal, getCanteenName, getActiveCanteenIds } = useCart();
+  const { getCanteenItems, getTotal, getCanteenName, getActiveCanteenIds, clearCart } = useCart();
   const { user, profile, checkBanStatus } = useAuth();
   const { canAcceptOrders, isAtLimit, orderLimit } = useCanteenOrderStatus(canteenId);
   const [isOrdering, setIsOrdering] = useState(false);
@@ -91,7 +92,7 @@ export default function Cart() {
   const { isActive, isEligibleForDiscount } = useMembership();
   const [showUpsell, setShowUpsell] = useState(false);
   const [hasShownUpsell, setHasShownUpsell] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cashfree' | 'wallet'>('cashfree');
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'wallet'>('razorpay');
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const { enableWallet } = useCollegeLocation();
@@ -183,17 +184,21 @@ export default function Cart() {
     fetchMembershipDiscount();
   }, [canteenId]);
 
-  // Load Cashfree SDK
+  // Load Razorpay Checkout SDK
   useEffect(() => {
+    if ((window as any).Razorpay) {
+      setSdkLoaded(true);
+      return;
+    }
     const script = document.createElement('script');
-    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
     script.onload = () => {
       setSdkLoaded(true);
-      console.log('Cashfree SDK loaded');
+      console.log('Razorpay SDK loaded');
     };
     script.onerror = () => {
-      console.error('Failed to load Cashfree SDK');
+      console.error('Failed to load Razorpay SDK');
       toast.error('Failed to load payment gateway');
     };
     document.body.appendChild(script);
@@ -579,43 +584,89 @@ export default function Cart() {
         }
       }
 
-      // Get the return URL (only for Cashfree payments)
-      const returnUrl = `${window.location.origin}/student/payment-result?order_id=${order.id}`;
-
-      // Create Cashfree payment order
-      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-cashfree-order', {
+      // Create Razorpay payment order
+      const { data: rzpData, error: rzpError } = await supabase.functions.invoke('create-razorpay-order', {
         body: {
-          orderId: order.id,
+          app_order_id: order.id,
           amount: total,
-          customerName: profile.name,
-          customerEmail: profile.email,
-          customerPhone: phoneNumber,
-          returnUrl,
+          customer_id: user.id,
+          customer_email: profile.email || user.email || '',
+          customer_phone: phoneNumber,
+          customer_name: profile.name || 'Student',
         },
       });
 
-      if (paymentError || !paymentData?.paymentSessionId) {
-        console.error('Payment order creation failed:', paymentError || paymentData);
+      if (rzpError || !rzpData?.razorpay_order_id) {
+        console.error('Razorpay order creation failed:', rzpError || rzpData);
         toast.error('Failed to initialize payment. Please try again.');
         setIsOrdering(false);
         return;
       }
 
-      console.log('Payment session created:', paymentData);
+      console.log('Razorpay order created:', rzpData.razorpay_order_id);
 
-      // Initialize Cashfree and redirect to checkout
-      if (window.Cashfree) {
-        const cashfree = window.Cashfree({ mode: 'production' });
-        const result = await cashfree.checkout({
-          paymentSessionId: paymentData.paymentSessionId,
-          redirectTarget: '_self',
-        });
+      // Open Razorpay Standard Checkout
+      if ((window as any).Razorpay) {
+        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_TuvhiyZZWb1L12';
+        const options = {
+          key: razorpayKey,
+          amount: Math.round(total * 100),
+          currency: 'INR',
+          name: canteenName || 'PreOrder Food',
+          description: `Order #${orderNo || order.id.slice(0, 8)}`,
+          order_id: rzpData.razorpay_order_id,
+          prefill: {
+            name: profile.name || '',
+            email: profile.email || user.email || '',
+            contact: phoneNumber,
+          },
+          theme: {
+            color: '#E11D48',
+          },
+          handler: async function (response: any) {
+            try {
+              toast.info('Verifying payment...');
+              const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
+                body: {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  app_order_id: order.id,
+                },
+              });
 
-        if (result.error) {
-          console.error('Cashfree checkout error:', result.error);
-          toast.error(result.error.message || 'Payment failed. Please try again.');
+              if (verifyError || !verifyData?.success) {
+                console.error('Payment verification failed:', verifyError || verifyData);
+                toast.error('Payment verification failed. Please check payment status in My Orders.');
+                navigate(`/student/payment-result?order_id=${order.id}&status=failed`);
+                return;
+              }
+
+              if (canteenId) {
+                clearCart(canteenId);
+              }
+
+              navigate(`/student/payment-result?order_id=${order.id}&status=success`);
+            } catch (err) {
+              console.error('Error handling payment success:', err);
+              navigate(`/student/payment-result?order_id=${order.id}`);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setIsOrdering(false);
+              toast.info('Payment was cancelled');
+            },
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (resp: any) {
+          console.error('Razorpay payment failed:', resp.error);
+          toast.error(resp.error?.description || 'Payment failed. Please try again.');
           setIsOrdering(false);
-        }
+        });
+        rzp.open();
       } else {
         toast.error('Payment gateway not loaded. Please refresh and try again.');
         setIsOrdering(false);
@@ -947,19 +998,19 @@ export default function Cart() {
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => setPaymentMethod('cashfree')}
-                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${paymentMethod === 'cashfree' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'}`}
+                onClick={() => setPaymentMethod('razorpay')}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${paymentMethod === 'razorpay' ? 'border-mcd-red bg-mcd-red/5' : 'border-mcd-border hover:border-mcd-red/30'}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${paymentMethod === 'cashfree' ? 'bg-mcd-red text-white' : 'bg-mcd-cream text-mcd-red'}`}>
+                  <div className={`p-2 rounded-lg ${paymentMethod === 'razorpay' ? 'bg-mcd-red text-white' : 'bg-mcd-cream text-mcd-red'}`}>
                     <CreditCard className="h-5 w-5" />
                   </div>
                   <div className="text-left">
                     <p className="font-bold text-sm">Online Payment</p>
-                    <p className="text-[10px] text-muted-foreground">UPI, Card, Netbanking</p>
+                    <p className="text-[10px] text-muted-foreground">UPI, Card, Netbanking (Razorpay)</p>
                   </div>
                 </div>
-                {paymentMethod === 'cashfree' && <Check className="h-5 w-5 text-mcd-red" />}
+                {paymentMethod === 'razorpay' && <Check className="h-5 w-5 text-mcd-red" />}
               </button>
 
               <button
@@ -1000,7 +1051,7 @@ export default function Cart() {
           <Button
             className="w-full mt-3 md:mt-4 bg-mcd-yellow hover:bg-yellow-400 text-foreground font-semibold h-11 md:h-12 rounded-xl text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handlePlaceOrder}
-            disabled={isOrdering || (paymentMethod === 'cashfree' && !sdkLoaded) || phoneNumber.length < 10 || !canAcceptOrders || isBannedStudent || (paymentMethod === 'wallet' && walletBalance < total)}
+            disabled={isOrdering || (paymentMethod === 'razorpay' && !sdkLoaded) || phoneNumber.length < 10 || !canAcceptOrders || isBannedStudent || (paymentMethod === 'wallet' && walletBalance < total)}
           >
             {isOrdering ? (
               <>
