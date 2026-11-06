@@ -274,14 +274,14 @@ export default function PaymentResult() {
           </>
         )}
 
-        {/* QR Code & Pickup PIN Display */}
-        {qrToken && (
+        {/* QR Code & Pickup PIN Display - Only when food is marked ready */}
+        {orderStatus === 'ready' && qrToken && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Pickup PIN / Code</p>
             <p className="text-3xl font-extrabold text-primary tracking-widest mb-3">
               {qrToken}
             </p>
-            <div className="bg-white rounded-lg p-4 inline-block shadow-sm">
+            <div className="bg-white rounded-lg p-4 inline-block shadow-sm ring-2 ring-primary ring-offset-2">
               <QRCodeSVG
                 value={qrToken}
                 size={180}
@@ -293,6 +293,18 @@ export default function PaymentResult() {
             </div>
             <p className="text-xs text-muted-foreground mt-3">
               Show this QR code or give PIN #{qrToken} when collecting
+            </p>
+          </div>
+        )}
+
+        {/* When not ready yet */}
+        {orderStatus !== 'ready' && orderStatus !== 'completed' && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4 text-center">
+            <p className="text-sm font-semibold text-amber-700">
+              {orderStatus === 'accepted' ? 'Food is being prepared!' : 'Order received! Awaiting vendor confirmation'}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your Pickup PIN and QR code will appear as soon as the vendor marks it ready.
             </p>
           </div>
         )}

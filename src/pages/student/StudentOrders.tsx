@@ -747,8 +747,8 @@ export default function StudentOrders() {
                       </div>
                     </div>
 
-                    {/* Pickup Code Display - Only for paid orders */}
-                    {order.payment_status === 'paid' && order.status !== 'completed' && order.status !== 'rejected' && (
+                    {/* Pickup Code Display - Only when food is marked ready by vendor */}
+                    {order.payment_status === 'paid' && order.status === 'ready' && (
                       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
                         <p className="text-xs text-muted-foreground text-center mb-1">Pickup PIN / Code</p>
                         <p className="text-3xl font-bold text-primary text-center tracking-widest">
@@ -921,8 +921,8 @@ export default function StudentOrders() {
                       </div>
                     </div>
 
-                    {/* Pickup Code Display - Only for paid orders */}
-                    {order.payment_status === 'paid' && order.pickup_code && order.status !== 'completed' && order.status !== 'cancelled' && (
+                    {/* Pickup Code Display - Only when order is marked ready */}
+                    {order.payment_status === 'paid' && order.pickup_code && order.status === 'ready' && (
                       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
                         <p className="text-xs text-muted-foreground text-center mb-1">Pickup Code</p>
                         <p className="text-3xl font-bold text-primary text-center tracking-widest">
