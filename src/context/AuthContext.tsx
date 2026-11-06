@@ -55,6 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
 
+    if (data && !data.role) {
+      data.role = 'student';
+    }
+
     return data as Profile | null;
   };
 

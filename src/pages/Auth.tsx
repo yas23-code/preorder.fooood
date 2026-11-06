@@ -88,7 +88,7 @@ export default function Auth() {
 
   // Redirect if already logged in (normal users) - wait for super admin check first
   if (user && profile && !isSuperAdminLoading && !isSuperAdmin) {
-    if (profile.role === "student") {
+    if (profile.role === "student" || (profile.role as string) === "customer" || !profile.role) {
       return <Navigate to="/student/dashboard" replace />;
     }
     // For vendors, the useEffect will handle the redirect after checking shop/canteen
