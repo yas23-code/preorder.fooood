@@ -558,49 +558,65 @@ export default function VendorDashboard() {
       return;
     }
 
-    const order = orders.find(o => o.pickup_code === pickupCode.trim() && o.status === 'ready');
-    if (!order) {
-      toast.error('No ready order found with this pickup code');
+    const cleanInput = pickupCode.trim().toUpperCase();
+
+    // 1. Match ready order locally by pickup_code, 4-char ID prefix, qr_token, or full ID
+    const order = orders.find(o => 
+      (o.pickup_code?.toUpperCase() === cleanInput ||
+       o.id.substring(0, 4).toUpperCase() === cleanInput ||
+       (o as any).qr_token?.toUpperCase() === cleanInput ||
+       o.id.toUpperCase() === cleanInput) &&
+      o.status === 'ready'
+    );
+
+    if (order) {
+      await handleMarkCompleted(order.id);
+      setPickupCode('');
       return;
     }
 
-    await handleMarkCompleted(order.id);
-    setPickupCode('');
+    // 2. Fall back to server RPC verification
+    const result = await verifyCanteenOrder(cleanInput);
+    if (result.success && (result.orderId || (result as any).order_id)) {
+      const matchId = result.orderId || (result as any).order_id;
+      setOrders(prev => prev.map(o => o.id === matchId ? { ...o, status: 'completed' as const } : o));
+      setPickupCode('');
+      toast.success('Order completed successfully!');
+    } else {
+      toast.error(result.error || 'No ready order found with this pickup code');
+    }
   };
 
   const handleQRScan = async (qrToken: string) => {
-    const result = await verifyCanteenOrder(qrToken);
-    if (result.success) {
-      // Update local state to reflect the completed order
-      setOrders(prev => prev.map(order =>
-        order.id === result.orderId
-          ? { ...order, status: 'completed' as const }
-          : order
-      ));
-      // Show enhanced green success toast
-      toast.custom(
-        (t) => (
-          <div
-            className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border border-green-400/30 animate-in slide-in-from-top-5 duration-300"
-            style={{
-              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-            }}
-            onClick={() => toast.dismiss(t)}
-          >
-            <div className="flex-shrink-0 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-white text-base">Order Completed!</p>
-              <p className="text-white/80 text-sm">Customer picked up successfully</p>
-            </div>
-            <div className="text-2xl">🎉</div>
-          </div>
-        ),
-        { duration: 4000 }
-      );
+    const cleanToken = qrToken.trim().toUpperCase();
+
+    // 1. Match ready order locally by pickup_code, 4-char ID prefix, qr_token, or full ID
+    const order = orders.find(o => 
+      (o.pickup_code?.toUpperCase() === cleanToken ||
+       o.id.substring(0, 4).toUpperCase() === cleanToken ||
+       (o as any).qr_token?.toUpperCase() === cleanToken ||
+       o.id.toUpperCase() === cleanToken) &&
+      o.status === 'ready'
+    );
+
+    if (order) {
+      await handleMarkCompleted(order.id);
+      setIsScannerOpen(false);
+      return { success: true };
     }
-    return result;
+
+    // 2. Fall back to server RPC verification
+    const result = await verifyCanteenOrder(cleanToken);
+    if (result.success && (result.orderId || (result as any).order_id)) {
+      const matchId = result.orderId || (result as any).order_id;
+      setOrders(prev => prev.map(o => o.id === matchId ? { ...o, status: 'completed' as const } : o));
+      setIsScannerOpen(false);
+      toast.success('Order Completed! Customer picked up successfully');
+      return { success: true };
+    } else {
+      toast.error(result.error || 'Invalid QR code');
+      return { success: false, error: result.error };
+    }
   };
 
   // Only show orders that are paid

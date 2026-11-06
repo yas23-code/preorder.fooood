@@ -748,11 +748,11 @@ export default function StudentOrders() {
                     </div>
 
                     {/* Pickup Code Display - Only for paid orders */}
-                    {order.payment_status === 'paid' && order.pickup_code && order.status !== 'completed' && order.status !== 'rejected' && (
+                    {order.payment_status === 'paid' && order.status !== 'completed' && order.status !== 'rejected' && (
                       <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
-                        <p className="text-xs text-muted-foreground text-center mb-1">Pickup Code</p>
+                        <p className="text-xs text-muted-foreground text-center mb-1">Pickup PIN / Code</p>
                         <p className="text-3xl font-bold text-primary text-center tracking-widest">
-                          {order.pickup_code}
+                          {order.pickup_code || order.id.slice(0, 4).toUpperCase()}
                         </p>
                       </div>
                     )}
@@ -760,7 +760,7 @@ export default function StudentOrders() {
                     {/* QR Code Display */}
                     <div className="mt-4 pt-4 border-t border-mcd-border">
                       <QRCodeDisplay
-                        qrToken={order.qr_token || null}
+                        qrToken={order.qr_token || order.pickup_code || order.id.slice(0, 4).toUpperCase()}
                         orderStatus={order.status}
                         paymentStatus={order.payment_status || 'pending'}
                         qrUsed={order.qr_used}
@@ -943,7 +943,7 @@ export default function StudentOrders() {
                     ) : (
                       <div className="mt-4 pt-4 border-t border-mcd-border">
                         <QRCodeDisplay
-                          qrToken={order.qr_token || null}
+                          qrToken={order.qr_token || order.pickup_code || order.id.slice(0, 4).toUpperCase()}
                           orderStatus={order.status}
                           paymentStatus={order.payment_status || 'pending'}
                           qrUsed={order.qr_used}

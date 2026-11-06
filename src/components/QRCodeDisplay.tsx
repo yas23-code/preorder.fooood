@@ -16,18 +16,6 @@ export function QRCodeDisplay({
   qrUsed = false,
   size = 180 
 }: QRCodeDisplayProps) {
-  // Don't show if not paid or no QR token
-  if (paymentStatus !== 'paid' || !qrToken) {
-    return (
-      <div className="bg-muted/50 rounded-xl p-6 text-center">
-        <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">
-          QR code will appear after payment is confirmed
-        </p>
-      </div>
-    );
-  }
-
   // If QR has been used (order completed)
   if (qrUsed || orderStatus === 'completed') {
     return (
@@ -35,6 +23,18 @@ export function QRCodeDisplay({
         <CheckCircle className="h-12 w-12 text-accent mx-auto mb-3" />
         <p className="text-lg font-semibold text-accent">Order Collected Successfully</p>
         <p className="text-sm text-accent/80 mt-1">Thank you for your order!</p>
+      </div>
+    );
+  }
+
+  // Don't show QR if not paid or no QR token
+  if (paymentStatus !== 'paid' || !qrToken) {
+    return (
+      <div className="bg-muted/50 rounded-xl p-6 text-center">
+        <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+        <p className="text-sm text-muted-foreground">
+          QR code will appear after payment is confirmed
+        </p>
       </div>
     );
   }

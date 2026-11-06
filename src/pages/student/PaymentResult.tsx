@@ -58,7 +58,7 @@ export default function PaymentResult() {
         if (orderData && orderData.payment_status === 'paid') {
           if (!isMounted) return;
 
-          const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : null;
+          const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : (orderId ? orderId.slice(0, 4).toUpperCase() : null);
           const safeCanteenId = orderData.canteen_id ? String(orderData.canteen_id) : null;
           const safeEstimatedReadyTime = orderData.estimated_ready_time ? String(orderData.estimated_ready_time) : null;
           const safeOrderStatus = orderData.status ? String(orderData.status) : null;
@@ -147,7 +147,7 @@ export default function PaymentResult() {
 
           if (!isMounted) return;
 
-          const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : null;
+          const safeQrToken = orderData.qr_token ? String(orderData.qr_token) : (orderId ? orderId.slice(0, 4).toUpperCase() : null);
           const safeCanteenId = orderData.canteen_id ? String(orderData.canteen_id) : null;
           const safeEstimatedReadyTime = orderData.estimated_ready_time ? String(orderData.estimated_ready_time) : null;
           const safeOrderStatus = orderData.status ? String(orderData.status) : null;
@@ -274,10 +274,13 @@ export default function PaymentResult() {
           </>
         )}
 
-        {/* QR Code Display */}
+        {/* QR Code & Pickup PIN Display */}
         {qrToken && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-4">
-            <p className="text-sm text-muted-foreground mb-3">Show this QR code to collect your order</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Pickup PIN / Code</p>
+            <p className="text-3xl font-extrabold text-primary tracking-widest mb-3">
+              {qrToken}
+            </p>
             <div className="bg-white rounded-lg p-4 inline-block shadow-sm">
               <QRCodeSVG
                 value={qrToken}
@@ -289,7 +292,7 @@ export default function PaymentResult() {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              Vendor will scan this when your order is ready
+              Show this QR code or give PIN #{qrToken} when collecting
             </p>
           </div>
         )}
