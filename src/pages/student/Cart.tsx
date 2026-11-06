@@ -557,27 +557,11 @@ export default function Cart() {
             return;
           }
 
-          toast.success('Order placed successfully using wallet!');
-
-          // Send email notification to vendor for wallet payment
-          try {
-            console.log('Sending email notification to vendor for wallet order...');
-            const { data: emailData, error: emailError } = await supabase.functions.invoke('send-vendor-order-email', {
-              body: {
-                order_id: order.id,
-                canteen_id: canteenId,
-              },
-            });
-            if (emailError) {
-              console.error('Error sending vendor email notification for wallet order:', emailError);
-            } else {
-              console.log('Vendor email notification sent for wallet order:', emailData);
-            }
-          } catch (err) {
-            console.error('Failed to trigger vendor email for wallet order:', err);
+          if (canteenId) {
+            clearCart(canteenId);
           }
-
-          navigate(`/student/payment-result?order_id=${order.id}&wallet=true`);
+          toast.success('Order placed successfully using wallet!');
+          navigate('/student/orders');
           return;
         } catch (walletErr) {
           console.error('Wallet payment error:', walletErr);
@@ -649,10 +633,11 @@ export default function Cart() {
                 clearCart(canteenId);
               }
 
-              navigate(`/student/payment-result?order_id=${order.id}&status=success`);
+              toast.success('Payment successful! Your order has been placed.');
+              navigate('/student/orders');
             } catch (err) {
               console.error('Error handling payment success:', err);
-              navigate(`/student/payment-result?order_id=${order.id}`);
+              navigate('/student/orders');
             }
           },
           modal: {

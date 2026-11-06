@@ -186,7 +186,7 @@ export default function VendorDashboard() {
           .in('id', oldOrderIds);
       }
 
-      // Fetch orders for this canteen
+      // Fetch orders for this canteen (only paid orders)
       const { data: ordersData, error } = await supabase
         .from('orders')
         .select(`
@@ -194,6 +194,7 @@ export default function VendorDashboard() {
           order_items (*)
         `)
         .eq('canteen_id', canteenData.id)
+        .eq('payment_status', 'paid')
         .order('created_at', { ascending: false });
 
       if (error) {
