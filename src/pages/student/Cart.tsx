@@ -499,8 +499,10 @@ export default function Cart() {
         .from('orders')
         .insert({
           user_id: user.id,
+          student_id: user.id,
           canteen_id: canteenId,
           total: fees.totalPayable,
+          total_amount: fees.totalPayable,
           platform_fee: fees.platformFee,
           pg_fee: fees.pgFee,
           net_profit: fees.netProfit,
@@ -509,6 +511,7 @@ export default function Cart() {
           status: 'pending',
           pickup_code: code,
           payment_status: 'pending',
+          payment_provider: 'razorpay',
           estimated_ready_time: etaData || null,
           order_no: orderNo || 1,
           order_type: orderType,
@@ -672,9 +675,9 @@ export default function Cart() {
         setIsOrdering(false);
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error placing order:', error);
-      toast.error('Failed to place order. Please try again.');
+      toast.error(error?.message || 'Failed to place order. Please try again.');
       setIsOrdering(false);
     }
   };
