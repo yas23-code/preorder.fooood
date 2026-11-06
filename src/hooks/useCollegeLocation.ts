@@ -127,21 +127,8 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
       return { isInsideCampus: null, distanceToCollege: null };
     }
 
-    // If no college config, treat as outside campus
-    if (!collegeConfig) {
-      console.log('[Location] No college config found - treating as outside campus');
-      return { isInsideCampus: false, distanceToCollege: null };
-    }
-
-    // Skip check if college config has default/invalid coordinates
-    if (collegeConfig.latitude === 0 && collegeConfig.longitude === 0) {
-      console.log('[Location] Invalid college coordinates (0,0) - treating as outside campus');
-      return { isInsideCampus: false, distanceToCollege: null };
-    }
-
-    // If location restriction is disabled, show all (treat as inside)
-    if (!collegeConfig.is_active) {
-      console.log('[Location] College config is inactive - treating as inside campus');
+    // If no college config or inactive, treat as inside campus so students can always access canteens
+    if (!collegeConfig || !collegeConfig.is_active) {
       return { isInsideCampus: true, distanceToCollege: null };
     }
 
@@ -185,9 +172,8 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
   // Loading = true until BOTH geolocation and config have resolved
   const isLoading = TEST_MODE ? false : (locationLoading || configLoading);
 
-  // Determine if nearby shops should be shown
-  // Default to true if no config exists or show_nearby_shops is not set
-  const showNearbyShops = collegeConfig?.show_nearby_shops ?? true;
+  // Disable nearby shops so students only see college canteens
+  const showNearbyShops = false;
   const enableCampusMembership = collegeConfig?.enable_campus_membership ?? true;
   const enableWallet = collegeConfig?.enable_wallet ?? true;
 

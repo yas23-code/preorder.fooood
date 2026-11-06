@@ -162,9 +162,7 @@ export default function StudentDashboard() {
 
   // Check college affiliation on mount
   useEffect(() => {
-    if (user && profile && profile.is_abes_student === null) {
-      setShowAffiliationModal(true);
-    }
+    // Disabled modal
   }, [user, profile]);
 
   const handleAffiliationSelection = async (isAbesStudent: boolean) => {
@@ -580,64 +578,37 @@ export default function StudentDashboard() {
             </div>
           ) : (
             <div className="space-y-8">
-              {/* College Canteens Section - Show only to ABES students */}
-              {profile?.is_abes_student === true && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
-                    <Building2 className="w-5 h-5 text-mcd-red" />
-                    <h2 className="font-bold text-lg text-foreground">College Canteens</h2>
-                  </div>
+              {/* College Canteens Section - Visible to all students */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
+                  <Building2 className="w-5 h-5 text-mcd-red" />
+                  <h2 className="font-bold text-lg text-foreground">College Canteens</h2>
+                </div>
 
-                  {isLoading ? (
-                    <div className="flex justify-center py-12">
-                      <LoadingSpinner text="Loading canteens..." />
-                    </div>
-                  ) : filteredCanteens.length > 0 ? (
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      {filteredCanteens.map((canteen, index) => (
-                        <CanteenCardWithCapacity
-                          key={canteen.id}
-                          canteen={canteen}
-                          index={index}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6">
-                      <EmptyState
-                        icon={MapPinOff}
-                        title={isInsideCampus === false ? "Outside Campus Limits" : "No canteens found"}
-                        description={isInsideCampus === false ? "College canteens are only available when you are on campus." : "Canteens will appear here once vendors register"}
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <LoadingSpinner text="Loading canteens..." />
+                  </div>
+                ) : filteredCanteens.length > 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredCanteens.map((canteen, index) => (
+                      <CanteenCardWithCapacity
+                        key={canteen.id}
+                        canteen={canteen}
+                        index={index}
                       />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Nearby Shops Section - Shown to everyone (Nearby Shops are enabled globally in config) */}
-              {showNearbyShops && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-xl px-4 py-3 shadow-sm">
-                    <MapPin className="w-5 h-5 text-mcd-red" />
-                    <h2 className="font-bold text-lg text-foreground">Nearby Shops</h2>
+                    ))}
                   </div>
-
-                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm">
-                    <NearbyShopsSection />
+                ) : (
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6">
+                    <EmptyState
+                      icon={MapPinOff}
+                      title="No canteens found"
+                      description="Canteens will appear here once vendors register"
+                    />
                   </div>
-                </div>
-              )}
-
-              {/* Special Empty State if no affiliation selected yet or nothing to show */}
-              {profile?.is_abes_student === false && !showNearbyShops && (
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6">
-                  <EmptyState
-                    icon={Store}
-                    title="Nothing found"
-                    description="There are no nearby shops or canteens available for you at the moment."
-                  />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </main>
