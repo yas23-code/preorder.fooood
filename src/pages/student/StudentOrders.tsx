@@ -146,7 +146,7 @@ export default function StudentOrders() {
           .lt('created_at', cutoffDate);
       }
 
-      // Now fetch remaining orders
+      // Now fetch remaining orders (only paid orders)
       const { data: ordersData, error } = await supabase
         .from('orders')
         .select(`
@@ -155,14 +155,17 @@ export default function StudentOrders() {
           canteens (*)
         `)
         .eq('user_id', user.id)
+        .eq('payment_status', 'paid')
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching orders:', error);
       } else {
-        const formattedOrders: Order[] = (ordersData || []).map(order => ({
-          id: order.id,
-          user_id: order.user_id,
+        const formattedOrders: Order[] = (ordersData || [])
+          .filter(order => (order as { payment_status?: string }).payment_status === 'paid')
+          .map(order => ({
+            id: order.id,
+            user_id: order.user_id,
           canteen_id: order.canteen_id,
           total: order.total,
           status: order.status,
@@ -234,10 +237,12 @@ export default function StudentOrders() {
           shop_order_items(id, name, quantity, price)
         `)
         .eq('user_id', user.id)
+        .eq('payment_status', 'paid')
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        setShopOrders(data as unknown as ShopOrder[]);
+        const paidShopOrders = (data as unknown as ShopOrder[]).filter(o => o.payment_status === 'paid');
+        setShopOrders(paidShopOrders);
       }
       setIsShopLoading(false);
     };
