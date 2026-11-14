@@ -238,7 +238,8 @@ export default function Cart() {
       }))
       : 15;
 
-    return maxPrepTime;
+    // Simple + Queue (+2m per pending/cooking order in queue, ready orders excluded)
+    return maxPrepTime + (pendingOrderCount * 2);
   }, [items, pendingOrderCount]);
 
   // Fetch wallet balance
