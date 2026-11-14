@@ -175,6 +175,8 @@ export default function StudentOrders() {
           qr_token: (order as { qr_token?: string | null }).qr_token,
           qr_used: (order as { qr_used?: boolean }).qr_used,
           order_no: (order as { order_no?: number | null }).order_no,
+          token_number: (order as { token_number?: string | null }).token_number || null,
+          pickup_token: (order as { pickup_token?: string | null }).pickup_token || null,
           created_at: order.created_at,
           updated_at: order.updated_at,
           items: order.order_items,
@@ -202,7 +204,12 @@ export default function StudentOrders() {
           setOrders(prev =>
             prev.map(order =>
               order.id === payload.new.id
-                ? { ...order, status: payload.new.status as Order['status'] }
+                ? {
+                    ...order,
+                    ...payload.new,
+                    items: order.items,
+                    canteen: order.canteen,
+                  }
                 : order
             )
           );
