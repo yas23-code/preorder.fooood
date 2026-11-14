@@ -230,19 +230,15 @@ export default function Cart() {
   const estimatedTime = useMemo(() => {
     if (items.length === 0) return 0;
 
-    // Get max prep time from all items
+    // Get max prep time from all items (default 15 if not set)
     const maxPrepTime = items.length > 0
       ? Math.max(...items.map(item => {
-        if (!item?.menuItem) return 10;
+        if (!item?.menuItem) return 15;
         return item.menuItem.prep_time || getDefaultPrepTime(item.menuItem.category);
       }))
-      : 0;
+      : 15;
 
-    // Calculate: (max_prep_time + (pending_orders * 2)) * peak_multiplier
-    const peakMultiplier = getPeakMultiplier();
-    const totalMinutes = Math.round((maxPrepTime + (pendingOrderCount * 2)) * peakMultiplier);
-
-    return totalMinutes;
+    return maxPrepTime;
   }, [items, pendingOrderCount]);
 
   // Fetch wallet balance

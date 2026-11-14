@@ -465,8 +465,19 @@ export default function VendorDashboard() {
       return;
     }
 
-    // Default fallback ETA: 15 minutes from now
-    let etaTimestamp = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    // Calculate prep minutes from order items (default 15)
+    let prepMinutes = 15;
+    if (order.items && order.items.length > 0) {
+      const times = order.items
+        .map(i => Number((i as any).prep_time || (i as any).menu_items?.prep_time || 0))
+        .filter(t => t > 0);
+      if (times.length > 0) {
+        prepMinutes = Math.max(...times);
+      }
+    }
+
+    // Default ETA: prepMinutes from now
+    let etaTimestamp = new Date(Date.now() + prepMinutes * 60 * 1000).toISOString();
 
     // Get item IDs for ETA calculation
     const itemIds = order.items?.map(item => item.menu_item_id) || [];
@@ -482,10 +493,10 @@ export default function VendorDashboard() {
       if (!etaError && etaData) {
         etaTimestamp = etaData;
       } else if (etaError) {
-        console.warn('calculate_order_eta RPC unavailable, using fallback 15 min ETA:', etaError);
+        console.warn('calculate_order_eta RPC unavailable, using calculated ETA:', etaError);
       }
     } catch (e) {
-      console.warn('calculate_order_eta threw error, using fallback 15 min ETA:', e);
+      console.warn('calculate_order_eta threw error, using calculated ETA:', e);
     }
 
     const nowIso = new Date().toISOString();
@@ -498,6 +509,7 @@ export default function VendorDashboard() {
         estimated_ready_time: etaTimestamp,
         accepted_at: nowIso,
         expected_ready_at: etaTimestamp,
+        estimated_prep_duration: prepMinutes,
       })
       .eq('id', orderId);
 
