@@ -427,12 +427,18 @@ export default function VendorDashboard() {
   const handleMarkCompleted = async (orderId: string) => {
     const { error } = await supabase
       .from('orders')
-      .update({ status: 'completed' })
+      .update({ 
+        status: 'completed',
+        qr_used: true
+      })
       .eq('id', orderId);
 
     if (error) {
       toast.error('Failed to update order');
     } else {
+      // Optimistically update orders in local state
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'completed' as const } : o));
+
       // Show enhanced green success toast
       toast.custom(
         (t) => (
@@ -584,70 +590,189 @@ export default function VendorDashboard() {
     }
   };
 
+  const verifyAndCompleteOrder = async (rawInput: string): Promise<{ success: boolean; error?: string }> => {
+    const input = rawInput.trim();
+    if (!input) {
+      return { success: false, error: 'Please enter a pickup code or scan a QR code' };
+    }
+
+    let extractedOrderId: string | null = null;
+    let extractedCode: string | null = null;
+    let extractedToken: string | null = null;
+
+    // Check if input is a JSON payload (emitted by the mobile app's QR code)
+    try {
+      const parsed = JSON.parse(input);
+      if (parsed && typeof parsed === 'object') {
+        extractedOrderId = parsed.order_id || parsed.id || null;
+        extractedCode = (parsed.pickup_code || parsed.code || '').toString().trim() || null;
+        extractedToken = (parsed.token || '').toString().trim() || null;
+      }
+    } catch (_) {
+      // Not JSON, plain text token/code
+    }
+
+    const cleanInput = input.toUpperCase();
+    const upperOrderId = extractedOrderId ? extractedOrderId.toUpperCase() : null;
+    const upperCode = extractedCode ? extractedCode.toUpperCase() : null;
+    const upperToken = extractedToken ? extractedToken.toUpperCase() : null;
+
+    // 1. Search local orders state
+    const matchedOrder = orders.find(o => {
+      const oId = o.id.toUpperCase();
+      const oShortId = o.id.substring(0, 4).toUpperCase();
+      const oPickupCode = o.pickup_code ? o.pickup_code.toUpperCase() : null;
+      const oQrToken = (o as any).qr_token ? (o as any).qr_token.toUpperCase() : null;
+      const oOrderNum = (o as any).order_number ? (o as any).order_number.toString().toUpperCase() : null;
+
+      // Exact or partial order UUID match
+      if (upperOrderId && (oId === upperOrderId || upperOrderId.includes(oId) || oId.includes(upperOrderId))) {
+        return true;
+      }
+      if (cleanInput.length >= 8 && (oId === cleanInput || cleanInput.includes(oId))) {
+        return true;
+      }
+
+      // Pickup code or 4-digit ID match
+      if (upperCode && (oPickupCode === upperCode || oShortId === upperCode)) {
+        return true;
+      }
+      if (upperToken && (oQrToken === upperToken || oPickupCode === upperToken)) {
+        return true;
+      }
+
+      // Plain cleanInput match
+      if (oPickupCode && oPickupCode === cleanInput) return true;
+      if (oShortId && oShortId === cleanInput) return true;
+      if (oQrToken && oQrToken === cleanInput) return true;
+      if (oOrderNum && (oOrderNum === cleanInput || `#${oOrderNum}` === cleanInput)) return true;
+
+      return false;
+    });
+
+    if (matchedOrder) {
+      if (matchedOrder.status === 'completed') {
+        toast.info('This order has already been completed.');
+        return { success: true };
+      }
+      if (matchedOrder.status === 'cancelled' || matchedOrder.status === 'rejected') {
+        toast.error(`This order was ${matchedOrder.status}.`);
+        return { success: false, error: `Order was ${matchedOrder.status}` };
+      }
+
+      await handleMarkCompleted(matchedOrder.id);
+      return { success: true };
+    }
+
+    // 2. Query Supabase directly if not currently loaded in local orders state
+    try {
+      let dbMatch: { id: string; status: string; canteen_id: string } | null = null;
+
+      if (extractedOrderId) {
+        const { data } = await supabase
+          .from('orders')
+          .select('id, status, canteen_id')
+          .eq('id', extractedOrderId.toLowerCase())
+          .maybeSingle();
+        if (data) dbMatch = data;
+      }
+
+      if (!dbMatch && upperToken) {
+        const { data } = await supabase
+          .from('orders')
+          .select('id, status, canteen_id')
+          .eq('qr_token', upperToken)
+          .maybeSingle();
+        if (data) dbMatch = data;
+      }
+
+      if (!dbMatch && upperCode && canteen?.id) {
+        const { data } = await supabase
+          .from('orders')
+          .select('id, status, canteen_id')
+          .eq('canteen_id', canteen.id)
+          .eq('pickup_code', upperCode)
+          .neq('status', 'completed')
+          .maybeSingle();
+        if (data) dbMatch = data;
+      }
+
+      if (!dbMatch && cleanInput.length >= 8) {
+        const { data } = await supabase
+          .from('orders')
+          .select('id, status, canteen_id')
+          .eq('id', cleanInput.toLowerCase())
+          .maybeSingle();
+        if (data) dbMatch = data;
+      }
+
+      if (!dbMatch && canteen?.id) {
+        const { data } = await supabase
+          .from('orders')
+          .select('id, status, canteen_id')
+          .eq('canteen_id', canteen.id)
+          .eq('pickup_code', cleanInput)
+          .neq('status', 'completed')
+          .maybeSingle();
+        if (data) dbMatch = data;
+      }
+
+      if (dbMatch) {
+        if (canteen && dbMatch.canteen_id && dbMatch.canteen_id !== canteen.id) {
+          toast.error('This order belongs to a different canteen/vendor');
+          return { success: false, error: 'Belongs to different vendor' };
+        }
+        if (dbMatch.status === 'completed') {
+          toast.info('This order has already been completed.');
+          return { success: true };
+        }
+        if (dbMatch.status === 'cancelled' || dbMatch.status === 'rejected') {
+          toast.error(`This order was ${dbMatch.status}.`);
+          return { success: false, error: `Order was ${dbMatch.status}` };
+        }
+
+        await handleMarkCompleted(dbMatch.id);
+        return { success: true };
+      }
+    } catch (err) {
+      console.warn('Direct order lookup error:', err);
+    }
+
+    // 3. Fall back to verifyCanteenOrder RPC
+    const tokenForRpc = upperToken || upperCode || cleanInput;
+    const result = await verifyCanteenOrder(tokenForRpc);
+    if (result.success && (result.orderId || (result as any).order_id)) {
+      const matchId = result.orderId || (result as any).order_id;
+      setOrders(prev => prev.map(o => o.id === matchId ? { ...o, status: 'completed' as const } : o));
+      toast.success('Order completed successfully!');
+      return { success: true };
+    }
+
+    return { success: false, error: result.error || 'Invalid QR code or pickup code' };
+  };
+
   const handleCompleteByCode = async () => {
     if (!pickupCode.trim()) {
       toast.error('Please enter a pickup code');
       return;
     }
 
-    const cleanInput = pickupCode.trim().toUpperCase();
-
-    // 1. Match ready order locally by pickup_code, 4-char ID prefix, qr_token, or full ID
-    const order = orders.find(o => 
-      (o.pickup_code?.toUpperCase() === cleanInput ||
-       o.id.substring(0, 4).toUpperCase() === cleanInput ||
-       (o as any).qr_token?.toUpperCase() === cleanInput ||
-       o.id.toUpperCase() === cleanInput) &&
-      o.status === 'ready'
-    );
-
-    if (order) {
-      await handleMarkCompleted(order.id);
+    const res = await verifyAndCompleteOrder(pickupCode);
+    if (res.success) {
       setPickupCode('');
-      return;
-    }
-
-    // 2. Fall back to server RPC verification
-    const result = await verifyCanteenOrder(cleanInput);
-    if (result.success && (result.orderId || (result as any).order_id)) {
-      const matchId = result.orderId || (result as any).order_id;
-      setOrders(prev => prev.map(o => o.id === matchId ? { ...o, status: 'completed' as const } : o));
-      setPickupCode('');
-      toast.success('Order completed successfully!');
     } else {
-      toast.error(result.error || 'No ready order found with this pickup code');
+      toast.error(res.error || 'No active order found with this pickup code');
     }
   };
 
   const handleQRScan = async (qrToken: string) => {
-    const cleanToken = qrToken.trim().toUpperCase();
-
-    // 1. Match ready order locally by pickup_code, 4-char ID prefix, qr_token, or full ID
-    const order = orders.find(o => 
-      (o.pickup_code?.toUpperCase() === cleanToken ||
-       o.id.substring(0, 4).toUpperCase() === cleanToken ||
-       (o as any).qr_token?.toUpperCase() === cleanToken ||
-       o.id.toUpperCase() === cleanToken) &&
-      o.status === 'ready'
-    );
-
-    if (order) {
-      await handleMarkCompleted(order.id);
+    const res = await verifyAndCompleteOrder(qrToken);
+    if (res.success) {
       setIsScannerOpen(false);
-      return { success: true };
-    }
-
-    // 2. Fall back to server RPC verification
-    const result = await verifyCanteenOrder(cleanToken);
-    if (result.success && (result.orderId || (result as any).order_id)) {
-      const matchId = result.orderId || (result as any).order_id;
-      setOrders(prev => prev.map(o => o.id === matchId ? { ...o, status: 'completed' as const } : o));
-      setIsScannerOpen(false);
-      toast.success('Order Completed! Customer picked up successfully');
       return { success: true };
     } else {
-      toast.error(result.error || 'Invalid QR code');
-      return { success: false, error: result.error };
+      toast.error(res.error || 'Invalid QR code');
+      return { success: false, error: res.error };
     }
   };
 
