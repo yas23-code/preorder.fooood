@@ -174,14 +174,16 @@ const CouponManagement = () => {
     setIsSaving(true);
 
     try {
+      const expiryStr = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const expiryVal = minAmount > 0 ? `${expiryStr}|min:${minAmount}` : expiryStr;
+
       if (editingCoupon) {
         const updatePayload: any = {
           code: trimmedCode,
           discount_amount: value,
           is_active: isActive,
           canteen_id: selectedCanteenId,
-          minimum_amount: minAmount,
-          expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          expiry_date: expiryVal,
         };
         const { error } = await supabase
           .from("coupons")
@@ -196,8 +198,7 @@ const CouponManagement = () => {
           discount_amount: value,
           is_active: isActive,
           canteen_id: selectedCanteenId,
-          minimum_amount: minAmount,
-          expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          expiry_date: expiryVal,
         };
         const { error } = await supabase.from("coupons").insert(insertPayload);
 

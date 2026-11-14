@@ -147,12 +147,19 @@ export default function Cart() {
           .eq('is_active', true);
 
         if (coupons) {
-          const mappedCoupons = (coupons as any[]).map(c => ({
-            ...c,
-            discount_type: c.discount_type || 'fixed',
-            discount_value: c.discount_amount ?? c.discount_value ?? 0,
-            minimum_amount: c.minimum_amount ?? 0,
-          }));
+          const mappedCoupons = (coupons as any[]).map(c => {
+            const rawExpiry = c.expiry_date;
+            let minAmt = c.minimum_amount ?? 0;
+            if (typeof rawExpiry === 'string' && rawExpiry.includes('|min:')) {
+              minAmt = parseFloat(rawExpiry.split('|min:')[1]) || minAmt;
+            }
+            return {
+              ...c,
+              discount_type: c.discount_type || 'fixed',
+              discount_value: c.discount_amount ?? c.discount_value ?? 0,
+              minimum_amount: minAmt,
+            };
+          });
           setAvailableCoupons(mappedCoupons as Coupon[]);
         }
       } catch (error) {
@@ -378,7 +385,11 @@ export default function Cart() {
         return;
       }
 
-      const minAmt = (data as any).minimum_amount || 0;
+      const rawExpiry = (data as any).expiry_date;
+      let minAmt = (data as any).minimum_amount || 0;
+      if (typeof rawExpiry === 'string' && rawExpiry.includes('|min:')) {
+        minAmt = parseFloat(rawExpiry.split('|min:')[1]) || minAmt;
+      }
       // Check minimum amount requirement
       if (minAmt > 0 && subtotal < minAmt) {
         toast.error(`Order must be at least ₹${minAmt} to use this coupon`);
