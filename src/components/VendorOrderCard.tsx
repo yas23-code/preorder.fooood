@@ -29,16 +29,23 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
   // Calculate prep duration from order or default to 15 min (matching mobile app logic)
   const prepDurationMinutes = Number((order as any).estimated_prep_duration) || 15;
 
+  // Only start/show ETA when vendor has accepted the order (or it's preparing/ready/in_progress)
+  const isOrderAccepted = order.status === 'accepted' || 
+                          order.status === 'preparing' || 
+                          order.status === 'ready' || 
+                          order.status === 'in_progress';
+
   // 1. Database estimated_ready_time or expected_ready_at or scheduled_pickup_time
   // 2. accepted_at + prepDuration
-  // 3. Fallback: created_at + prepDuration
   const targetReadyTime = (() => {
+    if (!isOrderAccepted) return null;
+
     const rawTime = order.estimated_ready_time || (order as any).expected_ready_at || (order as any).scheduled_pickup_time;
     if (rawTime) {
       const d = new Date(rawTime);
       if (!isNaN(d.getTime())) return d;
     }
-    const baseTimeStr = (order as any).accepted_at || order.created_at;
+    const baseTimeStr = (order as any).accepted_at;
     if (baseTimeStr) {
       const baseDate = new Date(baseTimeStr);
       if (!isNaN(baseDate.getTime())) {
@@ -65,6 +72,9 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
 
   // Formatted ETA string matching app ("Est. X mins" / "Ready soon")
   const etaText = (() => {
+    if (!isOrderAccepted) {
+      return null;
+    }
     if (order.status === 'completed' || order.status === 'cancelled' || order.status === 'rejected') {
       return null;
     }
@@ -78,9 +88,9 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
   })();
 
   // Determine time status: green (>5 min), yellow (1-5 min), red (<=0 min)
-  // Only show timer for 'accepted' orders, not 'pending'
+  // Only show timer for accepted orders
   const getTimeStatus = (): TimeStatus | null => {
-    if (order.status !== 'accepted' || minutesRemaining === null) return null;
+    if (!isOrderAccepted || minutesRemaining === null) return null;
     if (minutesRemaining <= 0) return 'overdue';
     if (minutesRemaining <= 5) return 'warning';
     return 'on-time';
