@@ -25,15 +25,34 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
   const previousStatus = useRef<TimeStatus | null>(null);
 
   const orderDate = order.created_at ? new Date(order.created_at) : null;
-  const estimatedReadyTime = order.estimated_ready_time ? new Date(order.estimated_ready_time) : null;
+  
+  // Calculate prep duration from order or default to 15 min (matching mobile app logic)
+  const prepDurationMinutes = Number((order as any).estimated_prep_duration) || 15;
+
+  // 1. Database estimated_ready_time or expected_ready_at or scheduled_pickup_time
+  // 2. accepted_at + prepDuration
+  // 3. Fallback: created_at + prepDuration
+  const targetReadyTime = (() => {
+    const rawTime = order.estimated_ready_time || (order as any).expected_ready_at || (order as any).scheduled_pickup_time;
+    if (rawTime) {
+      const d = new Date(rawTime);
+      if (!isNaN(d.getTime())) return d;
+    }
+    const baseTimeStr = (order as any).accepted_at || order.created_at;
+    if (baseTimeStr) {
+      const baseDate = new Date(baseTimeStr);
+      if (!isNaN(baseDate.getTime())) {
+        return new Date(baseDate.getTime() + prepDurationMinutes * 60 * 1000);
+      }
+    }
+    return null;
+  })();
 
   // Calculate remaining seconds for ETA (matching student dashboard calculation)
   const getSecondsRemaining = () => {
-    if (!estimatedReadyTime) return null;
+    if (!targetReadyTime) return null;
     const now = Date.now();
-    const targetTime = estimatedReadyTime.getTime();
-    const diffSeconds = Math.max(0, Math.floor((targetTime - now) / 1000));
-    return diffSeconds;
+    return Math.floor((targetReadyTime.getTime() - now) / 1000);
   };
 
   // Convert seconds to minutes (matching student dashboard calculation)
@@ -43,6 +62,20 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
 
   const secondsRemaining = getSecondsRemaining();
   const minutesRemaining = secondsRemaining !== null ? getMinutesRemaining(secondsRemaining) : null;
+
+  // Formatted ETA string matching app ("Est. X mins" / "Ready soon")
+  const etaText = (() => {
+    if (order.status === 'completed' || order.status === 'cancelled' || order.status === 'rejected') {
+      return null;
+    }
+    if (order.status === 'ready') {
+      return 'Ready for pickup';
+    }
+    if (minutesRemaining !== null) {
+      return minutesRemaining > 0 ? `Est. ${minutesRemaining} mins` : 'Ready soon';
+    }
+    return `Est. ${prepDurationMinutes} mins`;
+  })();
 
   // Determine time status: green (>5 min), yellow (1-5 min), red (<=0 min)
   // Only show timer for 'accepted' orders, not 'pending'
@@ -74,16 +107,16 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
     previousStatus.current = timeStatus;
   }, [timeStatus, order.id, order.status, playOverdueSound]);
 
-  // Auto-refresh every 30 seconds to update time status (only for accepted orders)
+  // Live tick every second to update countdown
   useEffect(() => {
-    if (order.status !== 'accepted' || !order.estimated_ready_time) return;
+    if (order.status !== 'accepted' && order.status !== 'pending') return;
 
     const interval = setInterval(() => {
       setTick(t => t + 1);
-    }, 1000); // Update every second to match student dashboard timer
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [order.status, order.estimated_ready_time]);
+  }, [order.status]);
 
   const statusConfig = {
     'on-time': {
@@ -178,28 +211,41 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
         })()}
       </div>
 
-      {/* Order Date & Time */}
-      {orderDate && (
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
-          <Clock className="h-4 w-4" />
-          <span>{format(orderDate, 'dd MMM yyyy, hh:mm a')}</span>
+      {/* Order Date & Time and Est. time */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm mb-3">
+        {orderDate && (
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>{format(orderDate, 'dd MMM yyyy, hh:mm a')}</span>
+          </div>
+        )}
+        {etaText && (
+          <div className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-xs border shadow-sm",
+            minutesRemaining !== null && minutesRemaining <= 0
+              ? "bg-red-50 text-red-600 border-red-200"
+              : minutesRemaining !== null && minutesRemaining <= 5
+                ? "bg-amber-50 text-amber-600 border-amber-200"
+                : "bg-primary/10 text-primary border-primary/20"
+          )}>
+            <Timer className="h-3.5 w-3.5" />
+            <span>{etaText}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Target ETA time for accepted/cooking orders */}
+      {order.status === 'accepted' && targetReadyTime && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3 bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/40">
+          <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+          <span>Ready by: {format(targetReadyTime, 'hh:mm a')}</span>
         </div>
       )}
 
-      {/* Estimated Ready Time / Prep Time - only for accepted orders */}
-      {order.status === 'accepted' && estimatedReadyTime && (
-        <div className="flex items-center gap-1.5 text-sm mb-4">
-          <Timer className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">
-            ETA: {format(estimatedReadyTime, 'hh:mm a')}
-          </span>
-        </div>
-      )}
-
-      {(order.status === 'ready' || order.status === 'completed') && estimatedReadyTime && (
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
-          <Timer className="h-4 w-4" />
-          <span>ETA was: {format(estimatedReadyTime, 'hh:mm a')}</span>
+      {(order.status === 'ready' || order.status === 'completed') && targetReadyTime && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+          <Timer className="h-3.5 w-3.5" />
+          <span>Ready time was: {format(targetReadyTime, 'hh:mm a')}</span>
         </div>
       )}
 
