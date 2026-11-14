@@ -623,7 +623,7 @@ export default function VendorDashboard() {
       const oShortId = o.id.substring(0, 4).toUpperCase();
       const oPickupCode = o.pickup_code ? o.pickup_code.toUpperCase() : null;
       const oQrToken = (o as any).qr_token ? (o as any).qr_token.toUpperCase() : null;
-      const oOrderNum = (o as any).order_number ? (o as any).order_number.toString().toUpperCase() : null;
+      const oOrderNum = ((o as any).token_number || (o as any).pickup_token || (o as any).order_no || (o as any).order_number)?.toString().toUpperCase() || null;
 
       // Exact or partial order UUID match
       if (upperOrderId && (oId === upperOrderId || upperOrderId.includes(oId) || oId.includes(upperOrderId))) {

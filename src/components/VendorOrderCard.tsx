@@ -154,24 +154,28 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
             })()}
           </p>
         </div>
-        {order.order_no && (
-          <div className="flex flex-col items-end gap-1.5">
-            <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-              <span className="text-xs font-medium">ORDER</span>
-              <span className="text-lg font-bold">#{order.order_no}</span>
-            </div>
-            {order.order_type && (
-              <div className={cn(
-                "px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider",
-                order.order_type === 'takeaway'
-                  ? "bg-amber-100 text-amber-700 border border-amber-200"
-                  : "bg-blue-100 text-blue-700 border border-blue-200"
-              )}>
-                {order.order_type === 'takeaway' ? '🛍️ Takeaway' : '🍽️ Dine In'}
+        {(() => {
+          const displayToken = (order as any).token_number || (order as any).pickup_token || order.order_no;
+          if (!displayToken) return null;
+          return (
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                <span className="text-xs font-medium">ORDER</span>
+                <span className="text-lg font-bold">#{displayToken}</span>
               </div>
-            )}
-          </div>
-        )}
+              {order.order_type && (
+                <div className={cn(
+                  "px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider",
+                  order.order_type === 'takeaway'
+                    ? "bg-amber-100 text-amber-700 border border-amber-200"
+                    : "bg-blue-100 text-blue-700 border border-blue-200"
+                )}>
+                  {order.order_type === 'takeaway' ? '🛍️ Takeaway' : '🍽️ Dine In'}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Order Date & Time */}

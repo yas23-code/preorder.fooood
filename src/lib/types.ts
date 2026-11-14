@@ -61,6 +61,8 @@ export interface Order {
   qr_token?: string | null;
   qr_used?: boolean;
   order_no?: number | null;
+  token_number?: string | null;
+  pickup_token?: string | null;
   order_type?: 'dine_in' | 'takeaway';
   packing_charge?: number;
   gst_amount?: number;

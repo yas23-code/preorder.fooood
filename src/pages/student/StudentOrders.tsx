@@ -648,10 +648,10 @@ export default function StudentOrders() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">
-                        {order.order_no && (
+                        {((order as any).token_number || (order as any).pickup_token || order.order_no) && (
                           <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-1.5">
                             <span className="text-xs font-medium">ORDER</span>
-                            <span className="text-lg font-bold">#{order.order_no}</span>
+                            <span className="text-lg font-bold">#{(order as any).token_number || (order as any).pickup_token || order.order_no}</span>
                           </div>
                         )}
                         {order.status === 'completed' && (
@@ -822,10 +822,10 @@ export default function StudentOrders() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">
-                        {order.order_no && (
+                        {((order as any).token_number || (order as any).pickup_token || order.order_no) && (
                           <div className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg flex items-center gap-2">
                             <span className="text-xs font-medium">ORDER</span>
-                            <span className="text-lg font-bold">#{order.order_no}</span>
+                            <span className="text-lg font-bold">#{(order as any).token_number || (order as any).pickup_token || order.order_no}</span>
                           </div>
                         )}
                         {order.status === 'completed' && (
