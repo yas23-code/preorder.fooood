@@ -180,6 +180,7 @@ const CouponManagement = () => {
           discount_amount: value,
           is_active: isActive,
           canteen_id: selectedCanteenId,
+          expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         };
         const { error } = await supabase
           .from("coupons")
@@ -194,6 +195,7 @@ const CouponManagement = () => {
           discount_amount: value,
           is_active: isActive,
           canteen_id: selectedCanteenId,
+          expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         };
         const { error } = await supabase.from("coupons").insert(insertPayload);
 
