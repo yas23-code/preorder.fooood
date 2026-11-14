@@ -465,35 +465,54 @@ export default function VendorDashboard() {
       return;
     }
 
+    // Default fallback ETA: 15 minutes from now
+    let etaTimestamp = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
     // Get item IDs for ETA calculation
     const itemIds = order.items?.map(item => item.menu_item_id) || [];
 
-    // Calculate ETA using database function
-    const { data: etaData, error: etaError } = await supabase
-      .rpc('calculate_order_eta', {
-        p_canteen_id: canteen.id,
-        p_item_ids: itemIds
-      });
+    // Attempt to calculate ETA using database function if available
+    try {
+      const { data: etaData, error: etaError } = await supabase
+        .rpc('calculate_order_eta', {
+          p_canteen_id: canteen.id,
+          p_item_ids: itemIds
+        });
 
-    if (etaError) {
-      console.error('Error calculating ETA:', etaError);
-      toast.error('Failed to calculate ETA');
-      return;
+      if (!etaError && etaData) {
+        etaTimestamp = etaData;
+      } else if (etaError) {
+        console.warn('calculate_order_eta RPC unavailable, using fallback 15 min ETA:', etaError);
+      }
+    } catch (e) {
+      console.warn('calculate_order_eta threw error, using fallback 15 min ETA:', e);
     }
+
+    const nowIso = new Date().toISOString();
 
     // Update order status to 'accepted' and set ETA
     const { error } = await supabase
       .from('orders')
       .update({
         status: 'accepted',
-        estimated_ready_time: etaData
+        estimated_ready_time: etaTimestamp,
+        accepted_at: nowIso,
+        expected_ready_at: etaTimestamp,
       })
       .eq('id', orderId);
 
     if (error) {
+      console.error('Failed to accept order:', error);
       toast.error('Failed to accept order');
       return;
     }
+
+    // Optimistically update local state
+    setOrders(prev => prev.map(o => o.id === orderId ? {
+      ...o,
+      status: 'accepted',
+      estimated_ready_time: etaTimestamp,
+    } : o));
 
     toast.success('Order accepted! Timer started.');
   };
