@@ -101,7 +101,13 @@ const CouponManagement = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setCoupons(data || []);
+      const mapped = (data || []).map((c: any) => ({
+        ...c,
+        discount_type: c.discount_type || 'fixed',
+        discount_value: c.discount_amount ?? c.discount_value ?? 0,
+        minimum_amount: c.minimum_amount ?? 0,
+      }));
+      setCoupons(mapped);
     } catch (error) {
       console.error("Error fetching coupons:", error);
       toast({
@@ -169,29 +175,27 @@ const CouponManagement = () => {
 
     try {
       if (editingCoupon) {
+        const updatePayload: any = {
+          code: trimmedCode,
+          discount_amount: value,
+          is_active: isActive,
+          canteen_id: selectedCanteenId,
+        };
         const { error } = await supabase
           .from("coupons")
-          .update({
-            code: trimmedCode,
-            discount_type: discountType,
-            discount_value: value,
-            is_active: isActive,
-            canteen_id: selectedCanteenId,
-            minimum_amount: minAmount,
-          })
+          .update(updatePayload)
           .eq("id", editingCoupon.id);
 
         if (error) throw error;
         toast({ title: "Success", description: "Coupon updated successfully" });
       } else {
-        const { error } = await supabase.from("coupons").insert({
+        const insertPayload: any = {
           code: trimmedCode,
-          discount_type: discountType,
-          discount_value: value,
+          discount_amount: value,
           is_active: isActive,
           canteen_id: selectedCanteenId,
-          minimum_amount: minAmount,
-        });
+        };
+        const { error } = await supabase.from("coupons").insert(insertPayload);
 
         if (error) {
           if (error.code === "23505") {
@@ -417,54 +421,55 @@ const CouponManagement = () => {
                     {coupons.map((coupon) => {
                       const canteenName = canteens.find(c => c.id === coupon.canteen_id)?.name || "—";
                       return (
-                      <TableRow key={coupon.id}>
-                        <TableCell className="font-mono font-medium">{coupon.code}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{canteenName}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {coupon.discount_type === "percentage" ? (
-                              <>
-                                <Percent className="h-3.5 w-3.5 text-muted-foreground" />
-                                {coupon.discount_value}%
-                              </>
-                            ) : (
-                              <>
-                                <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
-                                {coupon.discount_value}
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {coupon.minimum_amount > 0 ? `₹${coupon.minimum_amount}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Switch
-                            checked={coupon.is_active}
-                            onCheckedChange={() => handleToggleActive(coupon)}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(coupon)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(coupon)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );})}
+                        <TableRow key={coupon.id}>
+                          <TableCell className="font-mono font-medium">{coupon.code}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{canteenName}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {coupon.discount_type === "percentage" ? (
+                                <>
+                                  <Percent className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {coupon.discount_value}%
+                                </>
+                              ) : (
+                                <>
+                                  <IndianRupee className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {coupon.discount_value}
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {coupon.minimum_amount > 0 ? `₹${coupon.minimum_amount}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Switch
+                              checked={coupon.is_active}
+                              onCheckedChange={() => handleToggleActive(coupon)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(coupon)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDelete(coupon)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

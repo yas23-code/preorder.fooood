@@ -147,7 +147,13 @@ export default function Cart() {
           .eq('is_active', true);
 
         if (coupons) {
-          setAvailableCoupons(coupons as Coupon[]);
+          const mappedCoupons = (coupons as any[]).map(c => ({
+            ...c,
+            discount_type: c.discount_type || 'fixed',
+            discount_value: c.discount_amount ?? c.discount_value ?? 0,
+            minimum_amount: c.minimum_amount ?? 0,
+          }));
+          setAvailableCoupons(mappedCoupons as Coupon[]);
         }
       } catch (error) {
         console.error('Error fetching coupons:', error);
@@ -372,17 +378,25 @@ export default function Cart() {
         return;
       }
 
+      const minAmt = (data as any).minimum_amount || 0;
       // Check minimum amount requirement
-      if (data.minimum_amount && subtotal < data.minimum_amount) {
-        toast.error(`Order must be at least ₹${data.minimum_amount} to use this coupon`);
+      if (minAmt > 0 && subtotal < minAmt) {
+        toast.error(`Order must be at least ₹${minAmt} to use this coupon`);
         return;
       }
 
-      setAppliedCoupon(data as Coupon);
+      const mappedCoupon: Coupon = {
+        ...data,
+        discount_type: (data as any).discount_type || 'fixed',
+        discount_value: (data as any).discount_amount ?? (data as any).discount_value ?? 0,
+        minimum_amount: minAmt,
+      };
+
+      setAppliedCoupon(mappedCoupon);
       setCouponCode('');
-      toast.success(`Coupon applied! You saved ₹${data.discount_type === 'percentage'
-        ? Math.min((subtotal * data.discount_value) / 100, subtotal).toFixed(0)
-        : Math.min(data.discount_value, subtotal).toFixed(0)
+      toast.success(`Coupon applied! You saved ₹${mappedCoupon.discount_type === 'percentage'
+        ? Math.min((subtotal * mappedCoupon.discount_value) / 100, subtotal).toFixed(0)
+        : Math.min(mappedCoupon.discount_value, subtotal).toFixed(0)
         }`);
     } catch (error) {
       console.error('Error applying coupon:', error);
