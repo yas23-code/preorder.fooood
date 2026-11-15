@@ -17,6 +17,7 @@ interface MenuItem {
   category: string;
   price: number;
   is_available: boolean;
+  stock_quantity?: number;
 }
 
 interface DailyStock {
@@ -96,18 +97,36 @@ export function DailyStockManager({ canteenId, stockMode, onStockModeChange }: D
       )
       .subscribe();
 
+    // Also subscribe to menu_items realtime changes (from app updates)
+    const menuChannel = supabase
+      .channel(`vendor-menu-stock-${canteenId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'menu_items',
+          filter: `canteen_id=eq.${canteenId}`,
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(menuChannel);
     };
   }, [canteenId, today]);
 
   const fetchData = async () => {
     setIsLoading(true);
     
-    // Fetch menu items
+    // Fetch menu items with stock_quantity from DB
     const { data: items, error: itemsError } = await supabase
       .from('menu_items')
-      .select('id, name, category, price, is_available')
+      .select('id, name, category, price, is_available, stock_quantity')
       .eq('canteen_id', canteenId)
       .order('category', { ascending: true });
 
@@ -127,6 +146,14 @@ export function DailyStockManager({ canteenId, stockMode, onStockModeChange }: D
       .eq('canteen_id', canteenId)
       .eq('date', today);
 
+    // Initialize stock inputs from menu_items stock first
+    const inputs: Record<string, number> = {};
+    (items || []).forEach(it => {
+      if (it.stock_quantity !== undefined && it.stock_quantity !== null) {
+        inputs[it.id] = it.stock_quantity;
+      }
+    });
+
     if (stockError) {
       console.error('Error fetching daily stock:', stockError);
     } else {
@@ -135,15 +162,15 @@ export function DailyStockManager({ canteenId, stockMode, onStockModeChange }: D
         status: s.status as 'available' | 'unavailable'
       }));
       setTodayStock(typedStock);
-      setHasStockForToday(typedStock.length > 0);
+      setHasStockForToday(typedStock.length > 0 || (items || []).length > 0);
       
-      // Initialize stock inputs with existing quantities
-      const inputs: Record<string, number> = {};
+      // Override with today's stock if present
       typedStock.forEach(s => {
-        inputs[s.menu_item_id] = s.total_quantity;
+        inputs[s.menu_item_id] = s.remaining_quantity !== undefined ? s.remaining_quantity : s.total_quantity;
       });
-      setStockInputs(inputs);
     }
+
+    setStockInputs(inputs);
 
     // Check if yesterday has stock data
     const { data: yesterdayData } = await supabase
@@ -214,14 +241,14 @@ export function DailyStockManager({ canteenId, stockMode, onStockModeChange }: D
     setIsSaving(true);
 
     const stockRecords = menuItems
-      .filter(item => stockInputs[item.id] !== undefined && stockInputs[item.id] > 0)
+      .filter(item => stockInputs[item.id] !== undefined)
       .map(item => ({
         canteen_id: canteenId,
         menu_item_id: item.id,
         date: today,
-        total_quantity: stockInputs[item.id],
-        remaining_quantity: stockInputs[item.id],
-        status: 'available' as const
+        total_quantity: stockInputs[item.id] || 0,
+        remaining_quantity: stockInputs[item.id] || 0,
+        status: (stockInputs[item.id] > 0 ? 'available' : 'unavailable') as 'available' | 'unavailable'
       }));
 
     if (stockRecords.length === 0) {
@@ -230,23 +257,27 @@ export function DailyStockManager({ canteenId, stockMode, onStockModeChange }: D
       return;
     }
 
-    // Delete existing stock for today first
-    await supabase
-      .from('daily_stock')
-      .delete()
-      .eq('canteen_id', canteenId)
-      .eq('date', today);
-
-    // Insert new stock records
+    // Upsert into daily_stock
     const { error } = await supabase
       .from('daily_stock')
-      .insert(stockRecords);
+      .upsert(stockRecords, { onConflict: 'canteen_id,menu_item_id,date' });
+
+    // Also update menu_items directly to keep app & website in sync
+    for (const record of stockRecords) {
+      await supabase
+        .from('menu_items')
+        .update({
+          stock_quantity: record.remaining_quantity,
+          is_available: record.remaining_quantity > 0,
+        })
+        .eq('id', record.menu_item_id);
+    }
 
     if (error) {
       console.error('Error setting daily stock:', error);
       toast.error('Failed to save stock');
     } else {
-      toast.success(hasStockForToday ? 'Stock updated!' : 'Today\'s stock has been set!');
+      toast.success(hasStockForToday ? 'Stock updated across website and app!' : 'Today\'s stock set successfully!');
       setIsEditing(false);
       await fetchData();
     }
@@ -254,22 +285,43 @@ export function DailyStockManager({ canteenId, stockMode, onStockModeChange }: D
     setIsSaving(false);
   };
 
-  const handleMarkUnavailable = async (stockId: string) => {
+  const handleMarkUnavailable = async (stockId: string, menuItemId?: string) => {
     const { error } = await supabase
       .from('daily_stock')
       .update({ status: 'unavailable', remaining_quantity: 0 })
       .eq('id', stockId);
 
+    if (menuItemId) {
+      await supabase
+        .from('menu_items')
+        .update({ stock_quantity: 0, is_available: false })
+        .eq('id', menuItemId);
+    }
+
     if (error) {
       toast.error('Failed to mark as unavailable');
     } else {
-      toast.success('Item marked as unavailable for today');
+      toast.success('Item marked as unavailable');
       await fetchData();
     }
   };
 
   const getStockForItem = (itemId: string) => {
-    return todayStock.find(s => s.menu_item_id === itemId);
+    const found = todayStock.find(s => s.menu_item_id === itemId);
+    if (found) return found;
+
+    const menuItem = menuItems.find(m => m.id === itemId);
+    if (menuItem && menuItem.stock_quantity !== undefined) {
+      return {
+        id: `virtual-${menuItem.id}`,
+        menu_item_id: menuItem.id,
+        date: today,
+        total_quantity: menuItem.stock_quantity,
+        remaining_quantity: menuItem.stock_quantity,
+        status: (menuItem.stock_quantity > 0 && menuItem.is_available) ? 'available' : 'unavailable',
+      } as DailyStock;
+    }
+    return undefined;
   };
 
   // Group menu items by category
@@ -504,7 +556,7 @@ export function DailyStockManager({ canteenId, stockMode, onStockModeChange }: D
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleMarkUnavailable(stock.id)}
+                                  onClick={() => handleMarkUnavailable(stock.id, item.id)}
                                   className="text-xs h-7 border-red-200 text-red-600 hover:bg-red-50"
                                 >
                                   Mark Unavailable

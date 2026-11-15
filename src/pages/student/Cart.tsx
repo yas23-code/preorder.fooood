@@ -510,6 +510,30 @@ export default function Cart() {
       const code = generatePickupCode();
       const itemIds = items.map(item => item.menuItem.id);
 
+      // Concurrency-safe live stock check across both app and website
+      const { data: stockItems } = await supabase
+        .from('menu_items')
+        .select('id, name, stock_quantity, is_available')
+        .in('id', itemIds);
+
+      if (stockItems) {
+        for (const sItem of stockItems) {
+          const cartItem = items.find(ci => ci.menuItem.id === sItem.id);
+          const reqQty = cartItem ? cartItem.quantity : 1;
+          const remainingStock = sItem.stock_quantity ?? 0;
+          if (!sItem.is_available || remainingStock <= 0) {
+            toast.error(`"${sItem.name}" is now out of stock.`);
+            setIsOrdering(false);
+            return;
+          }
+          if (reqQty > remainingStock) {
+            toast.error(`Only ${remainingStock} of "${sItem.name}" remaining in stock.`);
+            setIsOrdering(false);
+            return;
+          }
+        }
+      }
+
       // Check canteen stock mode and validate stock for daily mode
       const { data: canteenData } = await supabase
         .from('canteens')

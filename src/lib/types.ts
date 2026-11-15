@@ -41,6 +41,8 @@ export interface MenuItem {
   price: number;
   image_url: string | null;
   is_available: boolean;
+  stock_quantity?: number | null;
+  stock_qty?: number | null;
   prep_time?: number | null;
   packing_charge?: number | null;
   created_at: string;

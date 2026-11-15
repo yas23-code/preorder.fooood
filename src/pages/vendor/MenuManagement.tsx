@@ -42,6 +42,7 @@ export default function MenuManagement() {
   const [formCategory, setFormCategory] = useState('');
   const [formPrepTime, setFormPrepTime] = useState('');
   const [formPackingCharge, setFormPackingCharge] = useState('');
+  const [formStock, setFormStock] = useState('50');
   const [formAvailable, setFormAvailable] = useState(true);
   const [formImage, setFormImage] = useState<File | null>(null);
   const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
@@ -57,6 +58,7 @@ export default function MenuManagement() {
   const [editCategory, setEditCategory] = useState('');
   const [editPrepTime, setEditPrepTime] = useState('');
   const [editPackingCharge, setEditPackingCharge] = useState('');
+  const [editStock, setEditStock] = useState('50');
   const [editAvailable, setEditAvailable] = useState(true);
   const [editImage, setEditImage] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
@@ -188,6 +190,7 @@ export default function MenuManagement() {
     setFormCategory('');
     setFormPrepTime('');
     setFormPackingCharge('');
+    setFormStock('50');
     setFormAvailable(true);
     clearAddImage();
     clearCategoryImage();
@@ -271,6 +274,7 @@ export default function MenuManagement() {
       }
 
       // Create the menu item with trimmed category name
+      const stockVal = formStock ? parseInt(formStock) : 50;
       const { data, error } = await supabase
         .from('menu_items')
         .insert({
@@ -281,7 +285,9 @@ export default function MenuManagement() {
           price: parseFloat(formPrice),
           prep_time: formPrepTime ? parseInt(formPrepTime) : null,
           packing_charge: formPackingCharge ? parseFloat(formPackingCharge) : null,
-          is_available: formAvailable,
+          is_available: formAvailable && stockVal > 0,
+          stock_quantity: stockVal,
+          stock_qty: stockVal,
         })
         .select()
         .single();
@@ -321,6 +327,7 @@ export default function MenuManagement() {
     setEditCategory(item.category);
     setEditPrepTime(item.prep_time ? item.prep_time.toString() : '');
     setEditPackingCharge(item.packing_charge ? item.packing_charge.toString() : '');
+    setEditStock(item.stock_quantity !== undefined && item.stock_quantity !== null ? item.stock_quantity.toString() : '50');
     setEditAvailable(item.is_available);
     setEditImage(null);
     setEditImagePreview(item.image_url);
@@ -346,6 +353,8 @@ export default function MenuManagement() {
         imageUrl = await uploadImage(editImage, editingItem.id);
       }
 
+      const stockVal = editStock ? parseInt(editStock) : 50;
+
       const { error } = await supabase
         .from('menu_items')
         .update({
@@ -355,7 +364,9 @@ export default function MenuManagement() {
           category: trimmedCategory,
           prep_time: editPrepTime ? parseInt(editPrepTime) : null,
           packing_charge: editPackingCharge ? parseFloat(editPackingCharge) : null,
-          is_available: editAvailable,
+          is_available: editAvailable && stockVal > 0,
+          stock_quantity: stockVal,
+          stock_qty: stockVal,
           image_url: imageUrl,
         })
         .eq('id', editingItem.id);
@@ -373,7 +384,9 @@ export default function MenuManagement() {
               category: trimmedCategory,
               prep_time: editPrepTime ? parseInt(editPrepTime) : null,
               packing_charge: editPackingCharge ? parseFloat(editPackingCharge) : null,
-              is_available: editAvailable,
+              is_available: editAvailable && stockVal > 0,
+              stock_quantity: stockVal,
+              stock_qty: stockVal,
               image_url: imageUrl,
             }
             : item
@@ -670,19 +683,35 @@ export default function MenuManagement() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="item-prep-time" className="text-mcd-text font-medium">Prep Time (mins)</Label>
-                <Input
-                  id="item-prep-time"
-                  type="number"
-                  value={formPrepTime}
-                  onChange={(e) => setFormPrepTime(e.target.value)}
-                  placeholder="Auto"
-                  min="1"
-                  max="120"
-                  className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
-                />
-                <p className="text-xs text-muted-foreground">Leave empty for auto</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="item-prep-time" className="text-mcd-text font-medium">Prep Time (mins)</Label>
+                  <Input
+                    id="item-prep-time"
+                    type="number"
+                    value={formPrepTime}
+                    onChange={(e) => setFormPrepTime(e.target.value)}
+                    placeholder="Auto"
+                    min="1"
+                    max="120"
+                    className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
+                  />
+                  <p className="text-xs text-muted-foreground">Leave empty for auto</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="item-stock" className="text-mcd-text font-medium">Stock (Units)</Label>
+                  <Input
+                    id="item-stock"
+                    type="number"
+                    value={formStock}
+                    onChange={(e) => setFormStock(e.target.value)}
+                    placeholder="50"
+                    min="0"
+                    className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
+                  />
+                  <p className="text-xs text-muted-foreground">Syncs with mobile app</p>
+                </div>
               </div>
 
               {/* Image Upload */}
@@ -840,6 +869,12 @@ export default function MenuManagement() {
                           </span>
                         </p>
                         <p className="text-sm">
+                          <span className="text-muted-foreground">Stock: </span>
+                          <span className={`font-semibold ${item.stock_quantity && item.stock_quantity > 0 ? 'text-foreground' : 'text-red-600'}`}>
+                            {item.stock_quantity ?? 0} units
+                          </span>
+                        </p>
+                        <p className="text-sm">
                           <span className="text-muted-foreground">Category: </span>
                           <span className="text-foreground">{item.category}</span>
                         </p>
@@ -913,7 +948,7 @@ export default function MenuManagement() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="edit-packing-charge" className="text-mcd-text font-medium">Packing Charge (₹)</Label>
                 <Input
@@ -940,7 +975,21 @@ export default function MenuManagement() {
                   max="120"
                   className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
                 />
-                <p className="text-xs text-muted-foreground">Leave empty for auto</p>
+                <p className="text-xs text-muted-foreground">Empty for auto</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-stock" className="text-mcd-text font-medium">Stock (Units)</Label>
+                <Input
+                  id="edit-stock"
+                  type="number"
+                  value={editStock}
+                  onChange={(e) => setEditStock(e.target.value)}
+                  placeholder="50"
+                  min="0"
+                  className="bg-mcd-selected border-mcd-border focus:border-mcd-yellow"
+                />
+                <p className="text-xs text-muted-foreground">App sync</p>
               </div>
             </div>
 

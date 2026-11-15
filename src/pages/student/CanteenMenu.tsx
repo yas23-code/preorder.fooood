@@ -544,8 +544,8 @@ export default function CanteenMenu() {
                   const isAdded = addedItems.has(item.id);
                   const quantityInCart = getItemQuantityInCart(item.id);
                   const itemStock = getItemStock(item.id);
-                  const isItemAvailable = item.is_available && itemStock.available;
-                  const isSoldOut = !itemStock.available && itemStock.mode === 'daily';
+                  const isSoldOut = !item.is_available || !itemStock.available || (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity <= 0);
+                  const isItemAvailable = !isSoldOut;
 
                   return (
                     <div
@@ -580,10 +580,10 @@ export default function CanteenMenu() {
                               {item.name}
                             </h3>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {itemStock.mode === 'daily' && itemStock.available && itemStock.remaining !== undefined && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 bg-accent/10 border-accent/30">
+                              {isItemAvailable && (itemStock.remaining !== undefined || item.stock_quantity !== undefined) && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 bg-accent/10 border-accent/30 font-semibold">
                                   <Package className="h-2.5 w-2.5 mr-0.5" />
-                                  {itemStock.remaining}
+                                  {itemStock.remaining ?? item.stock_quantity}
                                 </Badge>
                               )}
                               <div className="flex items-center gap-0.5">

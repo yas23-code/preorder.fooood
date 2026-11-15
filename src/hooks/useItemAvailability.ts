@@ -74,6 +74,7 @@ export function useItemAvailability(menuItemId: string, canteenId: string) {
 export function useCanteenStockInfo(canteenId: string) {
   const [stockMode, setStockMode] = useState<'simple' | 'daily'>('simple');
   const [stockMap, setStockMap] = useState<Record<string, { remaining: number; status: string }>>({});
+  const [menuItemsMap, setMenuItemsMap] = useState<Record<string, { stock_quantity: number; is_available: boolean }>>({});
   const [hasStockForToday, setHasStockForToday] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -93,9 +94,21 @@ export function useCanteenStockInfo(canteenId: string) {
       const mode = (canteen?.stock_mode as 'simple' | 'daily') || 'simple';
       setStockMode(mode);
 
-      if (mode === 'simple') {
-        setIsLoading(false);
-        return;
+      // Always fetch menu_items stock for live inventory
+      const { data: menuItems } = await supabase
+        .from('menu_items')
+        .select('id, stock_quantity, is_available')
+        .eq('canteen_id', canteenId);
+
+      if (menuItems) {
+        const mMap: Record<string, { stock_quantity: number; is_available: boolean }> = {};
+        menuItems.forEach(mi => {
+          mMap[mi.id] = {
+            stock_quantity: mi.stock_quantity ?? 0,
+            is_available: mi.is_available ?? true,
+          };
+        });
+        setMenuItemsMap(mMap);
       }
 
       // For daily mode, get today's stock for all items
@@ -152,30 +165,72 @@ export function useCanteenStockInfo(canteenId: string) {
       )
       .subscribe();
 
+    // Subscribe to realtime updates on menu_items stock
+    const menuChannel = supabase
+      .channel(`canteen-menu-items-${canteenId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'menu_items',
+          filter: `canteen_id=eq.${canteenId}`,
+        },
+        (payload) => {
+          const record = payload.new as any;
+          if (record && record.id) {
+            setMenuItemsMap(prev => ({
+              ...prev,
+              [record.id]: {
+                stock_quantity: record.stock_quantity ?? 0,
+                is_available: record.is_available ?? true,
+              }
+            }));
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(menuChannel);
     };
   }, [canteenId]);
 
   const getItemStock = (itemId: string) => {
+    const itemData = menuItemsMap[itemId];
+    const isAvail = itemData ? itemData.is_available : true;
+    const stockQty = itemData ? itemData.stock_quantity : undefined;
+
     if (stockMode === 'simple') {
-      return { available: true, mode: 'simple' as const };
+      if (itemData && (!isAvail || (stockQty !== undefined && stockQty <= 0))) {
+        return { available: false, mode: 'simple' as const, remaining: 0, reason: 'Sold out' };
+      }
+      return { available: true, mode: 'simple' as const, remaining: stockQty };
+    }
+    
+    // In daily mode:
+    const stock = stockMap[itemId];
+    if (stock) {
+      if (stock.status === 'unavailable' || stock.remaining === 0) {
+        return { available: false, mode: 'daily' as const, remaining: 0, reason: 'Sold out' };
+      }
+      return { available: true, mode: 'daily' as const, remaining: stock.remaining };
+    }
+
+    // Fallback to live menu_item stock
+    if (itemData) {
+      if (!isAvail || (stockQty !== undefined && stockQty <= 0)) {
+        return { available: false, mode: 'daily' as const, remaining: 0, reason: 'Sold out' };
+      }
+      return { available: true, mode: 'daily' as const, remaining: stockQty };
     }
     
     if (!hasStockForToday) {
       return { available: false, mode: 'daily' as const, reason: 'Stock not set' };
     }
     
-    const stock = stockMap[itemId];
-    if (!stock) {
-      return { available: false, mode: 'daily' as const, reason: 'Not in stock' };
-    }
-    
-    if (stock.status === 'unavailable' || stock.remaining === 0) {
-      return { available: false, mode: 'daily' as const, remaining: 0, reason: 'Sold out' };
-    }
-    
-    return { available: true, mode: 'daily' as const, remaining: stock.remaining };
+    return { available: false, mode: 'daily' as const, reason: 'Not in stock' };
   };
 
   return { stockMode, hasStockForToday, getItemStock, isLoading };
