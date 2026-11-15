@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { useQRVerification } from '@/hooks/useQRVerification';
-import { ClipboardList, Clock, CheckCircle, Package, Plus, LogOut, Tag, Search, X, IndianRupee, ShoppingBag, AlertCircle, XCircle, QrCode, Settings } from 'lucide-react';
+import { ClipboardList, Clock, CheckCircle, Package, Plus, LogOut, Tag, Search, X, IndianRupee, ShoppingBag, AlertCircle, XCircle, QrCode, Settings, Receipt } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
@@ -55,6 +55,7 @@ interface Canteen {
   stock_mode: 'simple' | 'daily';
   membership_discount?: number | null;
   membership_discount_start_time?: string | null;
+  gst_enabled?: boolean;
 }
 
 interface CustomerProfile {
@@ -590,6 +591,25 @@ export default function VendorDashboard() {
     }
   };
 
+  const handleToggleGst = async (checked: boolean) => {
+    if (!canteen) return;
+
+    setCanteen(prev => prev ? { ...prev, gst_enabled: checked } : null);
+
+    const { error } = await supabase
+      .from('canteens')
+      .update({ gst_enabled: checked })
+      .eq('id', canteen.id);
+
+    if (error) {
+      console.error('Failed to update GST setting:', error);
+      toast.error('Failed to update GST setting');
+      setCanteen(prev => prev ? { ...prev, gst_enabled: !checked } : null);
+    } else {
+      toast.success(checked ? 'GST (5%) is now ON' : 'GST (5%) is now turned OFF');
+    }
+  };
+
   const verifyAndCompleteOrder = async (rawInput: string): Promise<{ success: boolean; error?: string }> => {
     const input = rawInput.trim();
     if (!input) {
@@ -928,6 +948,18 @@ export default function VendorDashboard() {
                   onCheckedChange={handleToggleOpen}
                 />
               </div>
+
+              {/* GST Toggle */}
+              <div className="flex items-center gap-1 md:gap-2 border-l border-mcd-border pl-2 md:pl-4">
+                <span className={`text-xs md:text-sm font-medium ${(canteen.gst_enabled ?? true) ? 'text-emerald-700 font-semibold' : 'text-mcd-text/50'}`}>
+                  GST {(canteen.gst_enabled ?? true) ? '5%' : 'Off'}
+                </span>
+                <Switch
+                  checked={canteen.gst_enabled ?? true}
+                  onCheckedChange={handleToggleGst}
+                  title="Toggle GST (5%) on student orders"
+                />
+              </div>
               <Button asChild className="hidden md:flex bg-mcd-yellow hover:bg-mcd-yellow/90 text-mcd-text font-bold border-0">
                 <Link to="/vendor/menu">
                   <Plus className="h-4 w-4 mr-2" />
@@ -1029,6 +1061,32 @@ export default function VendorDashboard() {
               membership_discount: discount,
               membership_discount_start_time: startTime
             })}
+          />
+        </div>
+
+        {/* GST Settings Card */}
+        <div className="bg-white rounded-xl border border-mcd-border p-4 mb-6 md:mb-8 shadow-card flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl ${(canteen.gst_enabled ?? true) ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+              <Receipt className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-foreground font-poppins">GST (5%) on Orders</h3>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(canteen.gst_enabled ?? true) ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {(canteen.gst_enabled ?? true) ? 'Active (5%)' : 'Turned Off (0%)'}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {(canteen.gst_enabled ?? true)
+                  ? '5% GST is currently added to student orders at checkout.'
+                  : 'GST is turned off. Orders will have ₹0.00 GST on the cart page.'}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={canteen.gst_enabled ?? true}
+            onCheckedChange={handleToggleGst}
           />
         </div>
 

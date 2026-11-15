@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, User, Phone, Save, Loader2, Send, CheckCircle, XCircle, Copy, ExternalLink } from 'lucide-react';
+import { ArrowLeft, User, Phone, Save, Loader2, Send, CheckCircle, XCircle, Copy, ExternalLink, Receipt } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Logo } from '@/components/Logo';
 import { toast } from 'sonner';
 
@@ -21,6 +22,43 @@ export default function VendorSettings() {
     const [linkCode, setLinkCode] = useState<string | null>(null);
     const [isGeneratingCode, setIsGeneratingCode] = useState(false);
     const [isTelegramLinked, setIsTelegramLinked] = useState(false);
+
+    // Canteen GST state
+    const [canteen, setCanteen] = useState<{ id: string; name: string; gst_enabled: boolean } | null>(null);
+
+    useEffect(() => {
+        if (!user) return;
+        const fetchCanteen = async () => {
+            const { data } = await supabase
+                .from('canteens')
+                .select('id, name, gst_enabled')
+                .eq('vendor_id', user.id)
+                .maybeSingle();
+            if (data) {
+                setCanteen({
+                    id: data.id,
+                    name: data.name,
+                    gst_enabled: data.gst_enabled ?? true,
+                });
+            }
+        };
+        fetchCanteen();
+    }, [user]);
+
+    const handleToggleGst = async (checked: boolean) => {
+        if (!canteen) return;
+        setCanteen(prev => prev ? { ...prev, gst_enabled: checked } : null);
+        const { error } = await supabase
+            .from('canteens')
+            .update({ gst_enabled: checked })
+            .eq('id', canteen.id);
+        if (error) {
+            toast.error('Failed to update GST setting');
+            setCanteen(prev => prev ? { ...prev, gst_enabled: !checked } : null);
+        } else {
+            toast.success(checked ? 'GST (5%) is now ON' : 'GST is now turned OFF');
+        }
+    };
 
     useEffect(() => {
         if (profile) {
@@ -189,6 +227,42 @@ export default function VendorSettings() {
                         </form>
                     </CardContent>
                 </Card>
+
+                {/* GST Settings Card */}
+                {canteen && (
+                    <Card className="border-mcd-border shadow-card">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Receipt className="h-5 w-5 text-emerald-600" />
+                                GST (5%) Order Tax
+                            </CardTitle>
+                            <CardDescription>
+                                Enable or disable 5% GST on student orders for {canteen.name}.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-mcd-border">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-sm text-foreground">Collect 5% GST</p>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${canteen.gst_enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                                            {canteen.gst_enabled ? 'Active (5%)' : 'Turned Off (0%)'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {canteen.gst_enabled
+                                            ? '5% GST will be calculated and added to the order price on student cart page.'
+                                            : 'No GST (0%) will be included in student orders on cart page.'}
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={canteen.gst_enabled}
+                                    onCheckedChange={handleToggleGst}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Telegram Card */}
                 <Card className="border-mcd-border shadow-card">
