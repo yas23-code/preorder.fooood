@@ -252,13 +252,6 @@ export function VendorOrderCard({ order, customerName, onMarkReady, onMarkComple
         </div>
       )}
 
-      {(order.status === 'ready' || order.status === 'completed') && targetReadyTime && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
-          <Timer className="h-3.5 w-3.5" />
-          <span>Ready time was: {format(targetReadyTime, 'hh:mm a')}</span>
-        </div>
-      )}
-
       {/* Order Items */}
       <div className="space-y-1 mb-4">
         {order.items?.map(item => (
