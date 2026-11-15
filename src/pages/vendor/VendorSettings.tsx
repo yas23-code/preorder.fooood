@@ -23,15 +23,15 @@ export default function VendorSettings() {
     const [isGeneratingCode, setIsGeneratingCode] = useState(false);
     const [isTelegramLinked, setIsTelegramLinked] = useState(false);
 
-    // Canteen GST state
-    const [canteen, setCanteen] = useState<{ id: string; name: string; gst_enabled: boolean } | null>(null);
+    // Canteen GST & Order Limit state
+    const [canteen, setCanteen] = useState<{ id: string; name: string; gst_enabled: boolean; order_limit: number; order_limit_enabled: boolean } | null>(null);
 
     useEffect(() => {
         if (!user) return;
         const fetchCanteen = async () => {
             const { data } = await supabase
                 .from('canteens')
-                .select('id, name, gst_enabled')
+                .select('id, name, gst_enabled, order_limit, order_limit_enabled')
                 .eq('vendor_id', user.id)
                 .maybeSingle();
             if (data) {
@@ -39,6 +39,8 @@ export default function VendorSettings() {
                     id: data.id,
                     name: data.name,
                     gst_enabled: data.gst_enabled ?? true,
+                    order_limit: data.order_limit ?? 10,
+                    order_limit_enabled: data.order_limit_enabled ?? true,
                 });
             }
         };
@@ -57,6 +59,35 @@ export default function VendorSettings() {
             setCanteen(prev => prev ? { ...prev, gst_enabled: !checked } : null);
         } else {
             toast.success(checked ? 'GST (5%) is now ON' : 'GST is now turned OFF');
+        }
+    };
+
+    const handleToggleOrderLimit = async (checked: boolean) => {
+        if (!canteen) return;
+        setCanteen(prev => prev ? { ...prev, order_limit_enabled: checked } : null);
+        const { error } = await supabase
+            .from('canteens')
+            .update({ order_limit_enabled: checked })
+            .eq('id', canteen.id);
+        if (error) {
+            toast.error('Failed to update order limit setting');
+            setCanteen(prev => prev ? { ...prev, order_limit_enabled: !checked } : null);
+        } else {
+            toast.success(checked ? 'Order Limit Auto-pause is now ON' : 'Order Limit Auto-pause is now OFF');
+        }
+    };
+
+    const handleUpdateOrderLimit = async (newLimit: number) => {
+        if (!canteen || newLimit < 1) return;
+        setCanteen(prev => prev ? { ...prev, order_limit: newLimit } : null);
+        const { error } = await supabase
+            .from('canteens')
+            .update({ order_limit: newLimit, max_concurrent_orders: newLimit })
+            .eq('id', canteen.id);
+        if (error) {
+            toast.error('Failed to update order limit');
+        } else {
+            toast.success(`Active order limit set to ${newLimit} orders`);
         }
     };
 
@@ -260,6 +291,88 @@ export default function VendorSettings() {
                                     onCheckedChange={handleToggleGst}
                                 />
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Order Capacity Limit Card */}
+                    <Card className="border-mcd-border shadow-card">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600">⚡</span>
+                                Order Capacity Limit & Auto-Pause
+                            </CardTitle>
+                            <CardDescription>
+                                Automatically pause new student orders when active orders reach your capacity limit.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-mcd-border">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-sm text-foreground">Auto-Pause on Limit</p>
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${canteen.order_limit_enabled ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>
+                                            {canteen.order_limit_enabled ? 'Auto-Pause Active' : 'Unlimited'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {canteen.order_limit_enabled
+                                            ? `Orders automatically pause when you have ${canteen.order_limit} active orders, and resume once orders are completed.`
+                                            : 'Auto-pause is turned off. Orders arrive continuously regardless of queue size.'}
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={canteen.order_limit_enabled}
+                                    onCheckedChange={handleToggleOrderLimit}
+                                />
+                            </div>
+
+                            {canteen.order_limit_enabled && (
+                                <div className="p-4 bg-white rounded-xl border border-mcd-border space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-semibold text-sm text-foreground">Maximum Active Orders</p>
+                                            <p className="text-xs text-muted-foreground">Number of concurrent orders you can handle</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleUpdateOrderLimit(Math.max(1, (canteen.order_limit || 10) - 1))}
+                                                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 font-bold flex items-center justify-center transition-colors"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="w-12 text-center font-bold text-base text-foreground">
+                                                {canteen.order_limit || 10}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleUpdateOrderLimit((canteen.order_limit || 10) + 1)}
+                                                className="w-8 h-8 rounded-lg bg-mcd-yellow hover:bg-yellow-400 font-bold flex items-center justify-center transition-colors"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Presets */}
+                                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                        {[5, 10, 15, 20, 30].map(val => (
+                                            <button
+                                                key={val}
+                                                type="button"
+                                                onClick={() => handleUpdateOrderLimit(val)}
+                                                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                                                    canteen.order_limit === val
+                                                        ? 'bg-amber-500 text-white border-amber-600 font-bold'
+                                                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {val} orders
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}

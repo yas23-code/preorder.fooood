@@ -5,14 +5,18 @@ interface CanteenOrderStatus {
   canAcceptOrders: boolean;
   activeOrderCount: number;
   orderLimit: number | null;
+  orderLimitEnabled: boolean;
   isAtLimit: boolean;
   isLoading: boolean;
 }
+
+const ACTIVE_STATUSES = ['pending', 'accepted', 'confirmed', 'preparing', 'in_progress'];
 
 export function useCanteenOrderStatus(canteenId: string | undefined): CanteenOrderStatus {
   const [canAcceptOrders, setCanAcceptOrders] = useState(true);
   const [activeOrderCount, setActiveOrderCount] = useState(0);
   const [orderLimit, setOrderLimit] = useState<number | null>(null);
+  const [orderLimitEnabled, setOrderLimitEnabled] = useState(true);
   const [isAtLimit, setIsAtLimit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -26,31 +30,32 @@ export function useCanteenOrderStatus(canteenId: string | undefined): CanteenOrd
       // Fetch canteen settings
       const { data: canteen } = await supabase
         .from('canteens')
-        .select('order_limit')
+        .select('order_limit, order_limit_enabled, auto_paused_by_limit, is_open')
         .eq('id', canteenId)
         .single();
 
-      if (canteen) {
-        setOrderLimit(canteen.order_limit);
-      }
+      const limit = canteen?.order_limit ?? null;
+      const enabled = canteen?.order_limit_enabled !== false;
+      const isOpen = canteen?.is_open !== false;
+      const autoPaused = canteen?.auto_paused_by_limit === true;
 
-      // Fetch active order count (only in-progress/accepted orders count against limit)
+      setOrderLimit(limit);
+      setOrderLimitEnabled(enabled);
+
+      // Fetch active order count
       const { count } = await supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
         .eq('canteen_id', canteenId)
-        .eq('status', 'accepted')
+        .in('status', ACTIVE_STATUSES)
         .eq('payment_status', 'paid');
 
       const activeCount = count || 0;
       setActiveOrderCount(activeCount);
 
-      // Determine if at limit - order limit works automatically
-      const atLimit = canteen?.order_limit !== null && activeCount >= canteen.order_limit;
+      const atLimit = enabled && limit !== null && activeCount >= limit;
       setIsAtLimit(atLimit);
-      
-      // Can accept orders only if not at limit
-      setCanAcceptOrders(!atLimit);
+      setCanAcceptOrders(isOpen && !atLimit && !autoPaused);
       setIsLoading(false);
     };
 
@@ -68,29 +73,33 @@ export function useCanteenOrderStatus(canteenId: string | undefined): CanteenOrd
           filter: `canteen_id=eq.${canteenId}`,
         },
         async () => {
-          // Refetch active count on any order change (only in-progress/accepted orders count)
           const { count } = await supabase
             .from('orders')
             .select('*', { count: 'exact', head: true })
             .eq('canteen_id', canteenId)
-            .eq('status', 'accepted')
+            .in('status', ACTIVE_STATUSES)
             .eq('payment_status', 'paid');
 
           const activeCount = count || 0;
           setActiveOrderCount(activeCount);
 
-          // Refetch canteen settings to check limit
           const { data: canteen } = await supabase
             .from('canteens')
-            .select('order_limit')
+            .select('order_limit, order_limit_enabled, auto_paused_by_limit, is_open')
             .eq('id', canteenId)
             .single();
 
           if (canteen) {
-            setOrderLimit(canteen.order_limit);
-            const atLimit = canteen.order_limit !== null && activeCount >= canteen.order_limit;
+            const limit = canteen.order_limit ?? null;
+            const enabled = canteen.order_limit_enabled !== false;
+            const isOpen = canteen.is_open !== false;
+            const autoPaused = canteen.auto_paused_by_limit === true;
+
+            setOrderLimit(limit);
+            setOrderLimitEnabled(enabled);
+            const atLimit = enabled && limit !== null && activeCount >= limit;
             setIsAtLimit(atLimit);
-            setCanAcceptOrders(!atLimit);
+            setCanAcceptOrders(isOpen && !atLimit && !autoPaused);
           }
         }
       )
@@ -108,24 +117,34 @@ export function useCanteenOrderStatus(canteenId: string | undefined): CanteenOrd
           filter: `id=eq.${canteenId}`,
         },
         async (payload) => {
-          const newData = payload.new as { order_limit: number | null };
-          setOrderLimit(newData.order_limit);
+          const newData = payload.new as {
+            order_limit?: number | null;
+            order_limit_enabled?: boolean;
+            auto_paused_by_limit?: boolean;
+            is_open?: boolean;
+          };
 
-          // Refetch active count to get current value (in-progress/accepted orders)
+          const limit = newData.order_limit ?? null;
+          const enabled = newData.order_limit_enabled !== false;
+          const isOpen = newData.is_open !== false;
+          const autoPaused = newData.auto_paused_by_limit === true;
+
+          setOrderLimit(limit);
+          setOrderLimitEnabled(enabled);
+
           const { count } = await supabase
             .from('orders')
             .select('*', { count: 'exact', head: true })
             .eq('canteen_id', canteenId)
-            .eq('status', 'accepted')
+            .in('status', ACTIVE_STATUSES)
             .eq('payment_status', 'paid');
 
           const currentActiveCount = count || 0;
           setActiveOrderCount(currentActiveCount);
 
-          // Recalculate if at limit with fresh data
-          const atLimit = newData.order_limit !== null && currentActiveCount >= newData.order_limit;
+          const atLimit = enabled && limit !== null && currentActiveCount >= limit;
           setIsAtLimit(atLimit);
-          setCanAcceptOrders(!atLimit);
+          setCanAcceptOrders(isOpen && !atLimit && !autoPaused);
         }
       )
       .subscribe();
@@ -136,5 +155,6 @@ export function useCanteenOrderStatus(canteenId: string | undefined): CanteenOrd
     };
   }, [canteenId]);
 
-  return { canAcceptOrders, activeOrderCount, orderLimit, isAtLimit, isLoading };
+  return { canAcceptOrders, activeOrderCount, orderLimit, orderLimitEnabled, isAtLimit, isLoading };
 }
+
