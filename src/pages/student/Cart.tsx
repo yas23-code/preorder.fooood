@@ -616,7 +616,7 @@ export default function Cart() {
 
       // Open Razorpay Standard Checkout
       if ((window as any).Razorpay) {
-        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_TuvhiyZZWb1L12';
+        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_U002iO4E2ckCxm';
         const options = {
           key: razorpayKey,
           amount: Math.round(total * 100),

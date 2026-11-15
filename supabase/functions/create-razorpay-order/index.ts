@@ -45,8 +45,8 @@ serve(async (req: Request) => {
     }
 
     // ── Razorpay credentials ──
-    const keyId = Deno.env.get("RAZORPAY_KEY_ID")!;
-    const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET")!;
+    const keyId = Deno.env.get("RAZORPAY_KEY_ID") || "rzp_live_U002iO4E2ckCxm";
+    const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET") || "PivrS0pP8gvG15bHu8ODguCt";
 
     // Debug logging
     console.log(`[create-razorpay-order] keyId=${keyId?.substring(0, 10)}...`);
