@@ -61,6 +61,7 @@ export type Database = {
           location: string
           membership_discount: number | null
           membership_discount_start_time: string | null
+          gst_enabled?: boolean
           name: string
           order_limit: number | null
           stock_mode: string
@@ -78,6 +79,7 @@ export type Database = {
           location: string
           membership_discount?: number | null
           membership_discount_start_time?: string | null
+          gst_enabled?: boolean
           name: string
           order_limit?: number | null
           stock_mode?: string
@@ -95,6 +97,7 @@ export type Database = {
           location?: string
           membership_discount?: number | null
           membership_discount_start_time?: string | null
+          gst_enabled?: boolean
           name?: string
           order_limit?: number | null
           stock_mode?: string

@@ -89,7 +89,7 @@ export default function Cart() {
   const [isBannedStudent, setIsBannedStudent] = useState(false);
   const [membershipDiscount, setMembershipDiscount] = useState(5); // default ₹5
   const [membershipDiscountStartTime, setMembershipDiscountStartTime] = useState<string | null>(null);
-  const [gstEnabled, setGstEnabled] = useState<boolean>(true);
+  const [gstEnabled, setGstEnabled] = useState<boolean>(false);
   const { isActive, isEligibleForDiscount } = useMembership();
   const [showUpsell, setShowUpsell] = useState(false);
   const [hasShownUpsell, setHasShownUpsell] = useState(false);
@@ -171,17 +171,26 @@ export default function Cart() {
     fetchCoupons();
   }, [canteenId]);
 
+  const activeCanteenIds = getActiveCanteenIds();
+  const effectiveCanteenId = canteenId || (activeCanteenIds.length > 0 ? activeCanteenIds[0] : undefined);
+
   // Fetch membership discount & GST settings from canteen
   useEffect(() => {
-    if (!canteenId) return;
+    if (!effectiveCanteenId) return;
 
     const fetchCanteenSettings = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('canteens')
           .select('membership_discount, membership_discount_start_time, gst_enabled')
-          .eq('id', canteenId)
+          .eq('id', effectiveCanteenId)
           .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching canteen settings:', error);
+          return;
+        }
+
         if (data) {
           if (data.membership_discount !== null && data.membership_discount !== undefined) {
             setMembershipDiscount(Number(data.membership_discount));
@@ -191,9 +200,7 @@ export default function Cart() {
           } else {
             setMembershipDiscountStartTime(null);
           }
-          if (data.gst_enabled !== undefined && data.gst_enabled !== null) {
-            setGstEnabled(data.gst_enabled);
-          }
+          setGstEnabled(data.gst_enabled === true);
         }
       } catch (error) {
         console.error('Error fetching canteen settings:', error);
@@ -204,19 +211,19 @@ export default function Cart() {
 
     // Listen to real-time canteen settings changes (e.g. GST toggle)
     const channel = supabase
-      .channel(`canteen-gst-settings-${canteenId}`)
+      .channel(`canteen-gst-settings-${effectiveCanteenId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'canteens',
-          filter: `id=eq.${canteenId}`,
+          filter: `id=eq.${effectiveCanteenId}`,
         },
         (payload: any) => {
           if (payload.new) {
             if (payload.new.gst_enabled !== undefined && payload.new.gst_enabled !== null) {
-              setGstEnabled(payload.new.gst_enabled);
+              setGstEnabled(payload.new.gst_enabled === true);
             }
             if (payload.new.membership_discount !== undefined && payload.new.membership_discount !== null) {
               setMembershipDiscount(Number(payload.new.membership_discount));
@@ -229,7 +236,7 @@ export default function Cart() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [canteenId]);
+  }, [effectiveCanteenId]);
 
   // Load Razorpay Checkout SDK
   useEffect(() => {
@@ -337,10 +344,9 @@ export default function Cart() {
   const totalDiscount = discount + membershipDiscountAmount;
   const discountedAmount = Math.max(subtotal - totalDiscount, 0);
 
-  // Check if GST is enabled for this canteen (apply 5% if enabled; 0% if turned off)
+  // Apply 5% GST strictly if gst_enabled is true on canteen; 0% if turned off
   const isGauriCafe = canteenName?.toLowerCase().includes('gauri cafe') || false;
-  const isGstActive = gstEnabled !== false && (isGauriCafe || gstEnabled === true);
-  const gstRate = isGstActive ? 0.05 : 0;
+  const gstRate = gstEnabled === true ? 0.05 : 0;
   const gstAmount = Math.round(discountedAmount * gstRate * 100) / 100;
 
   // Calculate total packing charges
