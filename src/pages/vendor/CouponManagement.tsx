@@ -101,12 +101,20 @@ const CouponManagement = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      const mapped = (data || []).map((c: any) => ({
-        ...c,
-        discount_type: c.discount_type || 'fixed',
-        discount_value: c.discount_amount ?? c.discount_value ?? 0,
-        minimum_amount: c.minimum_amount ?? 0,
-      }));
+      const mapped = (data || []).map((c: any) => {
+        const rawExpiry = c.expiry_date;
+        let minAmt = Number(c.minimum_amount) || 0;
+        if (typeof rawExpiry === 'string' && rawExpiry.includes('|min:')) {
+          const parts = rawExpiry.split('|min:');
+          minAmt = parseFloat(parts[1]) || minAmt;
+        }
+        return {
+          ...c,
+          discount_type: c.discount_type || 'fixed',
+          discount_value: c.discount_amount ?? c.discount_value ?? 0,
+          minimum_amount: minAmt,
+        };
+      });
       setCoupons(mapped);
     } catch (error) {
       console.error("Error fetching coupons:", error);
