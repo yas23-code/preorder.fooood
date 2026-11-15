@@ -96,7 +96,7 @@ export default function Cart() {
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'wallet'>('razorpay');
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
   const [walletBalance, setWalletBalance] = useState<number>(0);
-  const { enableWallet } = useCollegeLocation();
+  const { enableCampusMembership, enableWallet } = useCollegeLocation();
   const navigate = useNavigate();
 
   // Check if student is banned on mount
@@ -326,7 +326,7 @@ export default function Cart() {
 
   // Calculate membership discount — also respects vendor's time restriction
   const membershipDiscountAmount = useMemo(() => {
-    if (!isEligibleForDiscount || subtotal < 70 || membershipDiscount <= 0) return 0;
+    if (!enableCampusMembership || !isEligibleForDiscount || subtotal < 70 || membershipDiscount <= 0) return 0;
     // Check time restriction
     if (membershipDiscountStartTime) {
       const now = new Date();
@@ -339,7 +339,7 @@ export default function Cart() {
       if (currentH < startH || (currentH === startH && currentM < startM)) return 0;
     }
     return membershipDiscount;
-  }, [isEligibleForDiscount, subtotal, membershipDiscount, membershipDiscountStartTime]);
+  }, [enableCampusMembership, isEligibleForDiscount, subtotal, membershipDiscount, membershipDiscountStartTime]);
 
   const totalDiscount = discount + membershipDiscountAmount;
   const discountedAmount = Math.max(subtotal - totalDiscount, 0);
@@ -386,16 +386,16 @@ export default function Cart() {
     };
   }, [discountedAmount, gstAmount, totalPackingCharge, paymentMethod, isBoysHostelCanteen, isActive, isGauriCafe]);
 
-  // Show upsell popup when packing charge is present and user is not a member
+  // Show upsell popup when packing charge is present, user is not a member, and campus membership is enabled
   useEffect(() => {
-    if (totalPackingCharge > 0 && !isActive && !hasShownUpsell && !isOrdering) {
+    if (enableCampusMembership && totalPackingCharge > 0 && !isActive && !hasShownUpsell && !isOrdering) {
       const timer = setTimeout(() => {
         setShowUpsell(true);
         setHasShownUpsell(true);
       }, 1500); // Small delay for better UX
       return () => clearTimeout(timer);
     }
-  }, [totalPackingCharge, isActive, hasShownUpsell, isOrdering]);
+  }, [enableCampusMembership, totalPackingCharge, isActive, hasShownUpsell, isOrdering]);
 
   const total = fees.totalPayable;
 
@@ -849,52 +849,54 @@ export default function Cart() {
 
       <main className="container mx-auto px-3 md:px-4 py-4 md:py-6 max-w-3xl">
         {/* Membership Upsell Dialog */}
-        <Dialog open={showUpsell} onOpenChange={setShowUpsell}>
-          <DialogContent className="sm:max-w-[425px] rounded-3xl border-mcd-border bg-white p-0 overflow-hidden">
-            <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-8 text-center text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-              <div className="relative z-10 space-y-4">
-                <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
-                  <Sparkles className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-black leading-tight">
-                  You just paid ₹{totalPackingCharge} packing 😢
-                </h3>
-                <p className="text-white/90 text-sm font-medium">
-                  Get membership & save more on next orders!
-                </p>
-              </div>
-            </div>
-            <div className="p-6 space-y-4 bg-white">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm text-foreground">
-                  <Check className="h-4 w-4 text-green-500 font-bold" />
-                  <span>Free packing on every order</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-foreground">
-                  <Check className="h-4 w-4 text-green-500 font-bold" />
-                  <span>Priority preorder support</span>
+        {enableCampusMembership && (
+          <Dialog open={showUpsell} onOpenChange={setShowUpsell}>
+            <DialogContent className="sm:max-w-[425px] rounded-3xl border-mcd-border bg-white p-0 overflow-hidden">
+              <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-8 text-center text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
+                <div className="relative z-10 space-y-4">
+                  <div className="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
+                    <Sparkles className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-black leading-tight">
+                    You just paid ₹{totalPackingCharge} packing 😢
+                  </h3>
+                  <p className="text-white/90 text-sm font-medium">
+                    Get membership & save more on next orders!
+                  </p>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 pt-2">
-                <Button 
-                  variant="gradient" 
-                  className="w-full h-12 rounded-xl font-bold shadow-lg"
-                  asChild
-                >
-                  <Link to="/student/membership">Join Campus Membership 🎓</Link>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-muted-foreground text-xs"
-                  onClick={() => setShowUpsell(false)}
-                >
-                  Maybe later
-                </Button>
+              <div className="p-6 space-y-4 bg-white">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-foreground">
+                    <Check className="h-4 w-4 text-green-500 font-bold" />
+                    <span>Free packing on every order</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-foreground">
+                    <Check className="h-4 w-4 text-green-500 font-bold" />
+                    <span>Priority preorder support</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 pt-2">
+                  <Button 
+                    variant="gradient" 
+                    className="w-full h-12 rounded-xl font-bold shadow-lg"
+                    asChild
+                  >
+                    <Link to="/student/membership">Join Campus Membership 🎓</Link>
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-muted-foreground text-xs"
+                    onClick={() => setShowUpsell(false)}
+                  >
+                    Maybe later
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Banned Student Warning Banner */}
         {isBannedStudent && (
@@ -957,13 +959,15 @@ export default function Cart() {
           </div>
 
           {/* Membership Discount Banner */}
-          <div className="py-2">
-            <MembershipBanner
-              subtotal={subtotal}
-              membershipDiscount={membershipDiscount}
-              startTime={membershipDiscountStartTime}
-            />
-          </div>
+          {enableCampusMembership && (
+            <div className="py-2">
+              <MembershipBanner
+                subtotal={subtotal}
+                membershipDiscount={membershipDiscount}
+                startTime={membershipDiscountStartTime}
+              />
+            </div>
+          )}
 
           {/* Coupon Section */}
           <div className="py-3 border-t border-mcd-border">
