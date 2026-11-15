@@ -261,6 +261,7 @@ export default function VendorSettings() {
 
                 {/* GST Settings Card */}
                 {canteen && (
+                    <>
                     <Card className="border-mcd-border shadow-card">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -375,6 +376,7 @@ export default function VendorSettings() {
                             )}
                         </CardContent>
                     </Card>
+                    </>
                 )}
 
                 {/* Telegram Card */}
