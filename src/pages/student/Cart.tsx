@@ -388,7 +388,11 @@ export default function Cart() {
 
   // Show upsell popup when packing charge is present, user is not a member, and campus membership is enabled
   useEffect(() => {
-    if (enableCampusMembership && totalPackingCharge > 0 && !isActive && !hasShownUpsell && !isOrdering) {
+    if (!enableCampusMembership) {
+      setShowUpsell(false);
+      return;
+    }
+    if (totalPackingCharge > 0 && !isActive && !hasShownUpsell && !isOrdering) {
       const timer = setTimeout(() => {
         setShowUpsell(true);
         setHasShownUpsell(true);

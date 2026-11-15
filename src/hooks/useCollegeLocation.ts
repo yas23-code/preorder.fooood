@@ -85,6 +85,28 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
     }
 
     fetchCollegeConfig();
+
+    // Listen to real-time changes on college_config
+    const channel = supabase
+      .channel('college-config-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'college_config',
+        },
+        (payload: any) => {
+          if (payload.new) {
+            setCollegeConfig(payload.new as CollegeConfig);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [requestLocation]);
 
   // Calculate distance and determine if user is inside campus
@@ -174,8 +196,8 @@ export function useCollegeLocation(): UseCollegeLocationReturn {
 
   // Disable nearby shops so students only see college canteens
   const showNearbyShops = false;
-  const enableCampusMembership = collegeConfig?.enable_campus_membership ?? true;
-  const enableWallet = collegeConfig?.enable_wallet ?? true;
+  const enableCampusMembership = collegeConfig ? (collegeConfig.enable_campus_membership === true) : false;
+  const enableWallet = collegeConfig ? (collegeConfig.enable_wallet === true) : false;
 
   return {
     isInsideCampus,
