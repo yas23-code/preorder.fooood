@@ -543,28 +543,68 @@ export default function Cart() {
 
       if (orderError) throw orderError;
 
-      // Create order items with size info
-      const orderItems = items.map(item => {
+      // Fetch latest menu items for this canteen to guarantee valid foreign keys
+      const { data: dbMenuItems } = await supabase
+        .from('menu_items')
+        .select('id, name, canteen_id, price')
+        .eq('canteen_id', canteenId);
+
+      const dbItemsList = dbMenuItems || [];
+      const dbItemMapById = new Map(dbItemsList.map(m => [m.id, m]));
+      const dbItemMapByName = new Map(dbItemsList.map(m => [m.name?.trim().toLowerCase(), m]));
+
+      // Create order items with size info and resolved valid menu_item_id
+      const resolvedOrderItems = [];
+      for (const item of items) {
+        let validMenuItem = dbItemMapById.get(item.menuItem.id);
+        if (!validMenuItem) {
+          // Stale ID from localStorage or changed ID: match by name in current canteen
+          validMenuItem = dbItemMapByName.get(item.menuItem.name?.trim().toLowerCase());
+        }
+
+        if (!validMenuItem) {
+          // If still not matched, check globally across menu_items table
+          const { data: globalMatch } = await supabase
+            .from('menu_items')
+            .select('id, name, canteen_id, price')
+            .ilike('name', item.menuItem.name?.trim())
+            .maybeSingle();
+          if (globalMatch) {
+            validMenuItem = globalMatch;
+          }
+        }
+
+        if (!validMenuItem) {
+          // Clean up pending order and notify user politely
+          await supabase.from('orders').delete().eq('id', order.id);
+          toast.error(`"${item.menuItem.name}" is no longer on the menu. Please remove it from your cart.`);
+          setIsOrdering(false);
+          return;
+        }
+
         const displayPrice = item.priceOverride ?? item.menuItem.price;
         const itemName = item.size
           ? `${item.menuItem.name} (${item.size.charAt(0).toUpperCase() + item.size.slice(1)})`
           : item.menuItem.name;
 
-        return {
+        resolvedOrderItems.push({
           order_id: order.id,
-          menu_item_id: item.menuItem.id,
+          menu_item_id: validMenuItem.id,
           name: itemName,
           price: displayPrice,
           quantity: item.quantity,
           packing_charge: item.menuItem.packing_charge || 0,
-        };
-      });
+        });
+      }
 
       const { error: itemsError } = await supabase
         .from('order_items')
-        .insert(orderItems);
+        .insert(resolvedOrderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        await supabase.from('orders').delete().eq('id', order.id);
+        throw itemsError;
+      }
 
       // Handle wallet payment (no Cashfree needed)
       if (paymentMethod === 'wallet') {
