@@ -221,11 +221,31 @@ serve(async (req: Request) => {
                         message: {
                           token: t.fcm_token,
                           notification: {
-                            title: "New Order Received!",
+                            title: "New Order Received! 🔔",
                             body: `Order #${orderData.order_number || ''} has been paid and is ready for prep.`,
                           },
+                          android: {
+                            priority: "high",
+                            ttl: "86400s",
+                            notification: {
+                              channel_id: "preorder_vendor_orders_channel_v3",
+                              sound: "default",
+                              default_sound: true,
+                              default_vibrate_timings: true,
+                              notification_priority: "PRIORITY_MAX",
+                              visibility: "PUBLIC",
+                              click_action: "FLUTTER_NOTIFICATION_CLICK",
+                            },
+                          },
                           data: {
-                            route: "/home",
+                            order_id: String(app_order_id),
+                            status: "pending",
+                            type: "pending",
+                            route: "/vendor/orders",
+                            is_vendor: "true",
+                            title: "New Order Received! 🔔",
+                            body: `Order #${orderData.order_number || ''} has been paid and is ready for prep.`,
+                            click_action: "FLUTTER_NOTIFICATION_CLICK",
                           },
                         },
                       }),
