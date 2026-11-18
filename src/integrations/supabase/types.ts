@@ -64,6 +64,9 @@ export type Database = {
           gst_enabled?: boolean
           name: string
           order_limit: number | null
+          order_limit_enabled: boolean
+          auto_paused_by_limit: boolean
+          max_concurrent_orders: number | null
           stock_mode: string
           updated_at: string
           vendor_email: string | null
@@ -82,6 +85,9 @@ export type Database = {
           gst_enabled?: boolean
           name: string
           order_limit?: number | null
+          order_limit_enabled?: boolean
+          auto_paused_by_limit?: boolean
+          max_concurrent_orders?: number | null
           stock_mode?: string
           updated_at?: string
           vendor_email?: string | null
@@ -100,6 +106,9 @@ export type Database = {
           gst_enabled?: boolean
           name?: string
           order_limit?: number | null
+          order_limit_enabled?: boolean
+          auto_paused_by_limit?: boolean
+          max_concurrent_orders?: number | null
           stock_mode?: string
           updated_at?: string
           vendor_email?: string | null

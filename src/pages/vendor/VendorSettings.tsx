@@ -126,21 +126,15 @@ export default function VendorSettings() {
                 code += characters.charAt(Math.floor(Math.random() * characters.length));
             }
 
-            // Delete any existing pending links for this user
-            await (supabase as any)
-                .from('telegram_pending_links')
-                .delete()
-                .eq('user_id', user.id);
-
-            // Insert new pending link (expires in 10 minutes)
+            // Upsert pending link (expires in 10 minutes) — atomically replaces any existing row
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
             const { error } = await (supabase as any)
                 .from('telegram_pending_links')
-                .insert({
+                .upsert({
                     user_id: user.id,
                     link_code: code,
                     expires_at: expiresAt,
-                });
+                }, { onConflict: 'user_id' });
 
             if (error) {
                 console.error('Failed to create link code:', error);
