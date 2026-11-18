@@ -41,20 +41,57 @@ serve(async (req: Request) => {
   }
 
   try {
-    const {
-      app_order_id,
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-    } = await req.json();
+    const bodyJson = await req.json();
+    const app_order_id = bodyJson.app_order_id || bodyJson.order_id || bodyJson.orderId;
+    let razorpay_order_id = bodyJson.razorpay_order_id || bodyJson.razorpayOrderId;
+    const razorpay_payment_id = bodyJson.razorpay_payment_id || bodyJson.razorpayPaymentId || "";
+    const razorpay_signature = bodyJson.razorpay_signature || bodyJson.razorpaySignature || "";
 
-    if (!app_order_id || !razorpay_order_id) {
+    if (!app_order_id) {
       return new Response(
-        JSON.stringify({ error: "app_order_id and razorpay_order_id are required" }),
+        JSON.stringify({ error: "order_id is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    // Initialize Supabase early for order resolution
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Look up the order in DB
+    const { data: dbOrder, error: dbOrderErr } = await supabase
+      .from("orders")
+      .select("id, status, payment_status, razorpay_order_id, razorpay_payment_id, canteen_id, student_id, total_amount, token_number, order_number")
+      .eq("id", app_order_id)
+      .single();
+
+    if (dbOrderErr || !dbOrder) {
+      return new Response(
+        JSON.stringify({ error: `Order not found: ${dbOrderErr?.message || app_order_id}` }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // If order was ALREADY marked as paid, return success immediately (idempotent)
+    if (dbOrder.payment_status === "paid") {
+      console.log(`[verify-razorpay-payment] Order ${app_order_id} is already paid.`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          payment_id: dbOrder.razorpay_payment_id || razorpay_payment_id,
+          order_status: "paid",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Resolve razorpay_order_id from DB if not passed by client
+    if (!razorpay_order_id && dbOrder.razorpay_order_id) {
+      razorpay_order_id = dbOrder.razorpay_order_id;
+    }
+
+    // ── Razorpay credentials ──
     const keyId = Deno.env.get("RAZORPAY_KEY_ID") || "rzp_live_U002iO4E2ckCxm";
     const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET") || "PivrS0pP8gvG15bHu8ODguCt";
 
@@ -62,7 +99,7 @@ serve(async (req: Request) => {
     let verifiedPaymentId = razorpay_payment_id || "";
 
     // ── Method 1: Check HMAC SHA-256 signature if provided ──
-    if (razorpay_payment_id && razorpay_signature) {
+    if (razorpay_payment_id && razorpay_signature && razorpay_order_id) {
       try {
         const expectedSignature = createHmac("sha256", keySecret)
           .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -80,7 +117,7 @@ serve(async (req: Request) => {
     // ── Method 2: Direct Razorpay API verification (Fallback & Truth Check) ──
     // If signature check wasn't performed or failed (e.g. UPI app switch or timeout),
     // query Razorpay server directly to see if the money was actually captured!
-    if (!isValid && keyId && keySecret) {
+    if (!isValid && keyId && keySecret && razorpay_order_id) {
       try {
         console.log(`[verify-razorpay-payment] Checking Razorpay API for order ${razorpay_order_id}...`);
         const authHeader = "Basic " + btoa(`${keyId}:${keySecret}`);
@@ -136,10 +173,6 @@ serve(async (req: Request) => {
     }
 
     // ── Update our DB ──
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     if (isValid) {
       await supabase
         .from("orders")
@@ -155,61 +188,55 @@ serve(async (req: Request) => {
       try {
         const { data: orderData } = await supabase
           .from("orders")
-          .select("canteen_id, order_number")
+          .select("id, canteen_id, student_id, user_id, total, total_amount, token_number, order_number, order_no")
           .eq("id", app_order_id)
           .single();
+
+        const shortId = app_order_id.length >= 4 ? app_order_id.substring(0, 4).toUpperCase() : "";
+        const displayOrderNum = (orderData as any)?.order_number || (orderData as any)?.token_number || shortId;
+        const orderNum = displayOrderNum ? `#${displayOrderNum}` : "";
 
         if (orderData?.canteen_id) {
           const { data: canteenData } = await supabase
             .from("canteens")
-            .select("vendor_id")
+            .select("vendor_id, name")
             .eq("id", orderData.canteen_id)
             .single();
 
-          if (canteenData?.vendor_id) {
-            // --- BROADCAST TO VENDOR UI ---
+          const serviceAccountStr = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_B64");
+          const projectId = Deno.env.get("FIREBASE_PROJECT_ID");
+
+          if (serviceAccountStr && projectId) {
+            const cleanB64 = serviceAccountStr.replace(/[^A-Za-z0-9+/=]/g, "");
+            let serviceAccount;
             try {
-              const channel = supabase.channel('vendor_updates');
-              await channel.subscribe();
-              await channel.send({
-                type: 'broadcast',
-                event: 'refresh_orders',
-                payload: { order_id: app_order_id, status: 'pending', vendor_id: canteenData.vendor_id }
-              });
-              await supabase.removeChannel(channel);
-            } catch (bErr) {
-              console.error("Broadcast err:", bErr);
+              serviceAccount = JSON.parse(atob(cleanB64));
+            } catch (parseErr: any) {
+              console.error("Failed to parse service account JSON:", parseErr.message);
             }
 
-            const { data: tokensData } = await supabase
-              .from("user_device_tokens")
-              .select("fcm_token")
-              .eq("user_id", canteenData.vendor_id);
+            if (serviceAccount) {
+              const jwtClient = new JWT({
+                email: serviceAccount.client_email,
+                key: serviceAccount.private_key,
+                scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
+              });
 
-            if (tokensData && tokensData.length > 0) {
-              const serviceAccountStr = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_B64");
-              const projectId = Deno.env.get("FIREBASE_PROJECT_ID");
+              const authTokens = await jwtClient.authorize();
+              const accessToken = authTokens.access_token;
 
-              if (serviceAccountStr && projectId) {
-                const cleanB64 = serviceAccountStr.replace(/[^A-Za-z0-9+/=]/g, "");
-                let serviceAccount;
+              // Helper for FCM v1 send
+              const sendFcmNotification = async (
+                token: string,
+                title: string,
+                body: string,
+                route: string,
+                orderId: string,
+                statusStr: string,
+                channelId: string = "preorder_new_orders_channel"
+              ) => {
                 try {
-                  serviceAccount = JSON.parse(atob(cleanB64));
-                } catch (parseErr: any) {
-                  throw new Error(`Failed to parse service account JSON: ${parseErr.message}`);
-                }
-
-                const jwtClient = new JWT({
-                  email: serviceAccount.client_email,
-                  key: serviceAccount.private_key,
-                  scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
-                });
-
-                const authTokens = await jwtClient.authorize();
-                const accessToken = authTokens.access_token;
-
-                for (const t of tokensData) {
-                  const fcmResponse = await fetch(
+                  const res = await fetch(
                     `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
                     {
                       method: "POST",
@@ -219,42 +246,230 @@ serve(async (req: Request) => {
                       },
                       body: JSON.stringify({
                         message: {
-                          token: t.fcm_token,
+                          token: token,
                           notification: {
-                            title: "New Order Received! 🔔",
-                            body: `Order #${orderData.order_number || ''} has been paid and is ready for prep.`,
+                            title: title,
+                            body: body,
                           },
                           android: {
-                            priority: "high",
+                            priority: "HIGH",
                             ttl: "86400s",
                             notification: {
-                              channel_id: "preorder_vendor_orders_channel_v3",
+                              channel_id: channelId,
                               sound: "default",
                               default_sound: true,
                               default_vibrate_timings: true,
                               notification_priority: "PRIORITY_MAX",
                               visibility: "PUBLIC",
                               click_action: "FLUTTER_NOTIFICATION_CLICK",
+                              tag: `order_${orderId}`,
                             },
                           },
                           data: {
-                            order_id: String(app_order_id),
-                            status: "pending",
-                            type: "pending",
-                            route: "/vendor/orders",
-                            is_vendor: "true",
-                            title: "New Order Received! 🔔",
-                            body: `Order #${orderData.order_number || ''} has been paid and is ready for prep.`,
+                            title: String(title),
+                            body: String(body),
+                            order_id: String(orderId),
+                            order_number: String(orderNum),
+                            status: String(statusStr),
+                            type: String(statusStr),
+                            role: String(channelId.includes("new_orders") ? "vendor" : "customer"),
+                            route: String(route),
+                            channel_id: String(channelId),
                             click_action: "FLUTTER_NOTIFICATION_CLICK",
+                            priority: "HIGH",
                           },
                         },
                       }),
                     }
                   );
-                  if (!fcmResponse.ok) {
-                    console.error("FCM Send Error:", await fcmResponse.text());
+                  if (!res.ok) {
+                    const errTxt = await res.text();
+                    console.error("FCM Send Error:", res.status, errTxt);
+                    if (res.status === 404 || errTxt.includes("UNREGISTERED") || errTxt.includes("NOT_FOUND")) {
+                      await supabase.from("user_device_tokens").delete().eq("fcm_token", token);
+                    }
                   } else {
-                    console.log("FCM Notification sent to", t.fcm_token);
+                    console.log(`FCM High-Priority sent [${channelId}] to`, token);
+                  }
+                } catch (e) {
+                  console.error("FCM dispatch error:", e);
+                }
+              };
+
+              // 1. Notify Vendor
+              {
+                const vendorUserIds = new Set<string>();
+                if (canteenData?.vendor_id) {
+                  vendorUserIds.add(canteenData.vendor_id);
+                }
+
+                // Check canteen_registrations for approved vendors
+                try {
+                  const { data: regList } = await supabase
+                    .from("canteen_registrations")
+                    .select("user_id")
+                    .eq("status", "approved");
+                  if (regList) {
+                    for (const r of regList) {
+                      if (r.user_id) vendorUserIds.add(r.user_id);
+                    }
+                  }
+                } catch (_) { }
+
+                // Also check other vendor user IDs from user_roles
+                const { data: vRoles } = await supabase
+                  .from("user_roles")
+                  .select("user_id")
+                  .or("role.eq.vendor,role.eq.shop_owner");
+                if (vRoles) {
+                  for (const vr of vRoles) {
+                    if (vr.user_id) vendorUserIds.add(vr.user_id);
+                  }
+                }
+
+                // Also check vendor profiles
+                const { data: vProfiles } = await supabase
+                  .from("profiles")
+                  .select("id")
+                  .or("role.eq.vendor,role.eq.shop_owner");
+                if (vProfiles) {
+                  for (const vp of vProfiles) {
+                    if (vp.id) vendorUserIds.add(vp.id);
+                  }
+                }
+
+                // Broadcast to live vendor UI
+                try {
+                  const channel = supabase.channel('vendor_updates');
+                  await channel.subscribe();
+                  await channel.send({
+                    type: 'broadcast',
+                    event: 'refresh_orders',
+                    payload: { order_id: app_order_id, status: 'pending', vendor_id: canteenData?.vendor_id }
+                  });
+                  await supabase.removeChannel(channel);
+                } catch (bErr) {
+                  console.error("Broadcast err:", bErr);
+                }
+
+                const vendorTitle = "New Order Received! 🔔";
+                const vendorBody = `Order ${orderNum} has been paid (₹${orderData?.total_amount || 0}) and is ready for prep.`;
+
+                // Persist vendor notification in Supabase for all matched vendors
+                const primaryVendorIds = vendorUserIds.size > 0 ? Array.from(vendorUserIds) : [canteenData?.vendor_id].filter(Boolean);
+                for (const vid of primaryVendorIds) {
+                  try {
+                    await supabase.from("notifications").insert({
+                      user_id: vid,
+                      role: "vendor",
+                      order_id: app_order_id,
+                      title: vendorTitle,
+                      body: vendorBody,
+                      type: "new_order",
+                      status: "pending",
+                      data: {
+                        order_id: app_order_id,
+                        order_number: (orderData as any)?.order_number || orderNum,
+                        canteen_id: orderData?.canteen_id,
+                        route: "/vendor/orders",
+                        channel_id: "preorder_new_orders_channel",
+                      },
+                      is_read: false,
+                      idempotency_key: `${app_order_id}_vendor_pending`,
+                    });
+                  } catch (vDbErr) {
+                    console.error("Error storing vendor notification:", vDbErr);
+                  }
+                }
+
+                // Multi-tier vendor device tokens lookup
+                let vendorTokensList: string[] = [];
+                if (vendorUserIds.size > 0) {
+                  const { data: vtByUser } = await supabase
+                    .from("user_device_tokens")
+                    .select("fcm_token")
+                    .in("user_id", Array.from(vendorUserIds));
+                  if (vtByUser) {
+                    for (const t of vtByUser) {
+                      if (t.fcm_token) vendorTokensList.push(t.fcm_token);
+                    }
+                  }
+                }
+
+                // Also query all tokens registered with role='vendor'
+                const { data: vtByRole } = await supabase
+                  .from("user_device_tokens")
+                  .select("fcm_token")
+                  .eq("role", "vendor");
+                if (vtByRole) {
+                  for (const t of vtByRole) {
+                    if (t.fcm_token) vendorTokensList.push(t.fcm_token);
+                  }
+                }
+
+                vendorTokensList = [...new Set(vendorTokensList.filter(Boolean))];
+                console.log(`[verify-razorpay-payment] Found ${vendorTokensList.length} vendor device token(s)`);
+
+                for (const vt of vendorTokensList) {
+                  await sendFcmNotification(
+                    vt,
+                    vendorTitle,
+                    vendorBody,
+                    "/vendor/orders",
+                    app_order_id,
+                    "pending",
+                    "preorder_new_orders_channel"
+                  );
+                }
+              }
+
+              // 2. Notify Student
+              if (orderData?.student_id) {
+                const cName = canteenData?.name || "Campus Canteen";
+                const orderNum = orderData.order_number ? `#${orderData.order_number}` : "";
+                const studentTitle = "Order Placed Successfully! 🎉";
+                const studentBody = `Order ${orderNum} sent to ${cName}. We'll notify you once it's accepted.`;
+
+                // Persist student notification in Supabase
+                try {
+                  await supabase.from("notifications").insert({
+                    user_id: orderData.student_id,
+                    role: "customer",
+                    order_id: app_order_id,
+                    title: studentTitle,
+                    body: studentBody,
+                    type: "order_placed",
+                    status: "paid",
+                    data: {
+                      order_id: app_order_id,
+                      order_number: orderData.order_number,
+                      canteen_id: orderData.canteen_id,
+                      route: `/order/${app_order_id}`,
+                      channel_id: "preorder_new_orders_channel",
+                    },
+                    is_read: false,
+                    idempotency_key: `${app_order_id}_student_order_paid`,
+                  });
+                } catch (sDbErr) {
+                  console.error("Error storing student notification:", sDbErr);
+                }
+
+                const { data: studentTokens } = await supabase
+                  .from("user_device_tokens")
+                  .select("fcm_token")
+                  .eq("user_id", orderData.student_id);
+
+                if (studentTokens && studentTokens.length > 0) {
+                  for (const st of studentTokens) {
+                    await sendFcmNotification(
+                      st.fcm_token,
+                      studentTitle,
+                      studentBody,
+                      `/order/${app_order_id}`,
+                      app_order_id,
+                      "paid",
+                      "preorder_new_orders_channel"
+                    );
                   }
                 }
               }
@@ -263,6 +478,90 @@ serve(async (req: Request) => {
         }
       } catch (pushErr) {
         console.error("Error sending push notification or broadcast:", pushErr);
+      }
+
+      // ── Send Telegram Notification to Vendor ──
+      try {
+        const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (telegramBotToken) {
+          const { data: orderData } = await supabase
+            .from("orders")
+            .select("id, canteen_id, student_id, user_id, total, total_amount, token_number, order_number, order_no")
+            .eq("id", app_order_id)
+            .single();
+
+          if (orderData?.canteen_id) {
+            const { data: canteenData } = await supabase
+              .from("canteens")
+              .select("vendor_id, name")
+              .eq("id", orderData.canteen_id)
+              .single();
+
+            if (canteenData?.vendor_id) {
+              const { data: vendorProfile } = await supabase
+                .from("profiles")
+                .select("telegram_chat_id, name")
+                .eq("id", canteenData.vendor_id)
+                .maybeSingle();
+
+              if (vendorProfile?.telegram_chat_id) {
+                // Fetch customer details
+                const custId = (orderData as any)?.student_id || (orderData as any)?.user_id;
+                let customerName = "Customer";
+                if (custId) {
+                  const { data: custProfile } = await supabase
+                    .from("profiles")
+                    .select("name")
+                    .eq("id", custId)
+                    .maybeSingle();
+                  if (custProfile?.name) customerName = custProfile.name;
+                }
+
+                // Fetch order items
+                const { data: orderItems } = await supabase
+                  .from("order_items")
+                  .select("name, quantity, price")
+                  .eq("order_id", app_order_id);
+
+                const items = orderItems || [];
+                const canteenName = canteenData.name || "Your Canteen";
+                const totalVal = (orderData as any)?.total_amount ?? (orderData as any)?.total ?? items.reduce((s: number, i: any) => s + (Number(i.price) * Number(i.quantity)), 0);
+                const shortId = app_order_id.length >= 4 ? app_order_id.substring(0, 4).toUpperCase() : "";
+                const displayNum = (orderData as any)?.order_number || (orderData as any)?.token_number || (orderData as any)?.order_no || shortId;
+
+                const itemsText = items.length > 0
+                  ? items.map((i: any) => `  • ${i.name} x${i.quantity} — ₹${(Number(i.price) * Number(i.quantity)).toFixed(0)}`).join('\n')
+                  : '  • 1x Order';
+
+                const telegramMessage =
+                  `🔔 *New Order Received!*\n\n` +
+                  `📋 *Order:* #${displayNum}\n` +
+                  `🏪 *Canteen:* ${canteenName}\n` +
+                  `👤 *Customer:* ${customerName}\n\n` +
+                  `📦 *Items:*\n` +
+                  `${itemsText}\n\n` +
+                  `💰 *Total: ₹${Number(totalVal).toFixed(0)}*\n\n` +
+                  `⏱️ Please prepare this order and mark it as "Ready" when done!`;
+
+                const tgRes = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chat_id: vendorProfile.telegram_chat_id,
+                    text: telegramMessage,
+                    parse_mode: "Markdown",
+                  }),
+                });
+                const tgJson = await tgRes.json();
+                console.log(`[verify-razorpay-payment] Telegram notification sent to ${vendorProfile.telegram_chat_id}:`, JSON.stringify(tgJson));
+              } else {
+                console.log(`[verify-razorpay-payment] Vendor ${canteenData.vendor_id} has not linked Telegram.`);
+              }
+            }
+          }
+        }
+      } catch (tgErr) {
+        console.error("[verify-razorpay-payment] Error sending Telegram notification:", tgErr);
       }
     } else {
       // Don't mark as permanently failed if it was just pending/unverified
