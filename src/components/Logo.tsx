@@ -26,7 +26,7 @@ export function Logo({ size = "md", showExtension = true }: LogoProps) {
       <img
         src={preorderLogo}
         alt="preorder.food"
-        className={`${sizeClasses[size]} ${sizeClasses[size].replace("h-", "w-")} rounded-full object-cover group-hover:scale-105 transition-transform`}
+        className={`${sizeClasses[size]} ${sizeClasses[size].replace("h-", "w-")} rounded-xl object-contain group-hover:scale-105 transition-transform`}
       />
       <span className={`${textClasses[size]} font-bold font-display`}>
         <span className="text-foreground">pre</span>
